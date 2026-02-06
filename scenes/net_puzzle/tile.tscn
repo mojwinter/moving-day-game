@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3 uid="uid://c2tile001"]
+
+[ext_resource type="Script" path="res://scripts/net_puzzle/tile.gd" id="1_tile"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1"]
+size = Vector2(120, 120)
+
+[node name="NetTile" type="Node2D"]
+script = ExtResource("1_tile")
+
+[node name="ClickArea" type="Area2D" parent="."]
+
+[node name="CollisionShape" type="CollisionShape2D" parent="ClickArea"]
+position = Vector2(60, 60)
+shape = SubResource("RectangleShape2D_1")
+
+[connection signal="input_event" from="ClickArea" to="." method="_on_click_area_input_event"]
