@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/tracks_puzzle/square.gd" id="1_sq"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1"]
+size = Vector2(20, 20)
+
+[node name="TrackSquare" type="Node2D"]
+script = ExtResource("1_sq")
+
+[node name="ClickArea" type="Area2D" parent="."]
+
+[node name="CollisionShape" type="CollisionShape2D" parent="ClickArea"]
+position = Vector2(10, 10)
+shape = SubResource("RectangleShape2D_1")
+
+[connection signal="input_event" from="ClickArea" to="." method="_on_click_area_input_event"]
