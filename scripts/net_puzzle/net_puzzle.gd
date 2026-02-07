@@ -2,8 +2,8 @@ extends Node2D
 ## Scene controller for the Night 3 Net/Rotation puzzle.
 ## Manages 3 sequential stages: Rotation -> Trace (Solder) -> Calibration.
 
-const CELL_SIZE := 120
-const GRID_OFFSET := Vector2(100, 100)
+const CELL_SIZE := 32
+const GRID_OFFSET := Vector2(80, 10)
 const GRID_W := 5
 const GRID_H := 5
 
@@ -35,7 +35,6 @@ func _ready() -> void:
 	grid_manager.generate_puzzle()
 	_create_tile_nodes()
 	_refresh_all_tiles()
-	_update_stage_label()
 
 
 func _create_tile_nodes() -> void:
@@ -82,7 +81,6 @@ func _enter_trace_stage() -> void:
 	grid_manager.tiles[src.y * GRID_W + src.x].is_soldered = true
 	_set_all_draw_mode(1)  # TRACE
 	_refresh_all_tiles()
-	_update_stage_label()
 
 
 func _enter_calibration_stage() -> void:
@@ -92,12 +90,10 @@ func _enter_calibration_stage() -> void:
 	_set_all_draw_mode(2)  # CALIBRATION
 	_update_calibration_colors()
 	_refresh_all_tiles()
-	_update_stage_label()
 
 
 func _on_all_stages_complete() -> void:
-	$WinLabel.visible = true
-	_update_stage_label()
+	pass
 
 
 # =========================================================================
@@ -203,7 +199,6 @@ func _handle_calibration_input(event: InputEvent) -> void:
 		grid_manager.tiles[pos.y * GRID_W + pos.x].pot_value = new_val
 		_update_calibration_colors()
 		_refresh_all_tiles()
-		_update_stage_label()
 		_check_calibration_win()
 
 
@@ -292,25 +287,7 @@ func _refresh_all_tiles() -> void:
 			tile_nodes[idx].refresh(grid_manager.tiles[idx])
 
 
-func _update_stage_label() -> void:
-	if not has_node("StageLabel"):
-		return
-	match current_stage:
-		Stage.ROTATION:
-			$StageLabel.text = "Rotate tiles to connect all paths"
-		Stage.TRACE:
-			$StageLabel.text = "Drag along the traces to lay solder"
-		Stage.CALIBRATION:
-			var locked := 0
-			for i in range(pot_positions.size()):
-				if _pot_error(i) <= POT_WIN_TOLERANCE:
-					locked += 1
-			$StageLabel.text = "Tune each dial until it glows green  (%d / %d locked)" % [
-				locked, pot_positions.size()]
-
-
 func _on_new_game_pressed() -> void:
-	$WinLabel.visible = false
 	current_stage = Stage.ROTATION
 	is_dragging = false
 	active_pot_index = -1
@@ -325,4 +302,3 @@ func _on_new_game_pressed() -> void:
 	_set_all_draw_mode(0)  # ROTATION
 	_create_tile_nodes()
 	_refresh_all_tiles()
-	_update_stage_label()
