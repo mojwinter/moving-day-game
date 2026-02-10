@@ -8,12 +8,3 @@ script = ExtResource("1_puzzle")
 
 [node name="GridManager" type="Node" parent="."]
 script = ExtResource("2_grid")
-
-[node name="NewGameButton" type="Button" parent="."]
-offset_left = 2.0
-offset_top = 2.0
-offset_right = 40.0
-offset_bottom = 10.0
-text = "New"
-
-[connection signal="pressed" from="NewGameButton" to="." method="_on_new_game_pressed"]

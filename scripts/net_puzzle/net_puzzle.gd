@@ -6,8 +6,10 @@ const CELL_SIZE := 32
 const GRID_OFFSET := Vector2(80, 10)
 const GRID_W := 5
 const GRID_H := 5
+const NEW_BTN_RECT := Rect2(2, 2, 24, 12)
 
 const TileScene := preload("res://scenes/net_puzzle/tile.tscn")
+const PIXEL_FONT := preload("res://assets/fonts/m3x6.ttf")
 
 enum Stage { ROTATION, TRACE, CALIBRATION }
 
@@ -49,6 +51,24 @@ func _create_tile_nodes() -> void:
 
 
 # =========================================================================
+# Drawing
+# =========================================================================
+
+func _draw() -> void:
+	var font_size := 16
+	draw_rect(NEW_BTN_RECT, Color(0.25, 0.23, 0.2))
+	draw_rect(NEW_BTN_RECT, Color(0.4, 0.38, 0.35), false)
+	var txt := "New"
+	var ts := PIXEL_FONT.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
+	var ascent := PIXEL_FONT.get_ascent(font_size)
+	var descent := PIXEL_FONT.get_descent(font_size)
+	var text_h := ascent + descent
+	var tx := NEW_BTN_RECT.position.x + (NEW_BTN_RECT.size.x - ts.x) / 2.0
+	var ty := NEW_BTN_RECT.position.y + (NEW_BTN_RECT.size.y - text_h) / 2.0 + ascent
+	draw_string(PIXEL_FONT, Vector2(tx, ty), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0.8, 0.8, 0.7))
+
+
+# =========================================================================
 # Input routing
 # =========================================================================
 
@@ -56,6 +76,14 @@ func _on_tile_clicked(x: int, y: int) -> void:
 	if current_stage == Stage.ROTATION:
 		grid_manager.rotate_tile(x, y)
 		_refresh_all_tiles()
+
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		var local: Vector2 = event.global_position - global_position
+		if NEW_BTN_RECT.has_point(local):
+			_on_new_game_pressed()
+			get_viewport().set_input_as_handled()
 
 
 func _unhandled_input(event: InputEvent) -> void:

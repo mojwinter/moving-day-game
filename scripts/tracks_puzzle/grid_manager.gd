@@ -430,8 +430,8 @@ func _sf_update_flags(sf: Array) -> Array:
 			var idx := y * GRID_W + x
 			var track_dirs: int = (sf[idx] >> TC.S_TRACK_SHIFT) & TC.ALLDIR
 			var notrack_dirs: int = (sf[idx] >> TC.S_NOTRACK_SHIFT) & TC.ALLDIR
-			var ntrack := TC.NBITS[track_dirs]
-			var nnotrack := TC.NBITS[notrack_dirs]
+			var ntrack: int = TC.NBITS[track_dirs]
+			var nnotrack: int = TC.NBITS[notrack_dirs]
 
 			# If NOTRACK square, all edges must be NOTRACK
 			if sf[idx] & TC.S_NOTRACK:

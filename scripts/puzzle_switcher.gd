@@ -37,4 +37,4 @@ func _load_puzzle(key: int) -> void:
 
 func _draw() -> void:
 	var hint: String = "[1] Circuit  [2] Tracks"
-	draw_string(PIXEL_FONT, Vector2(2, 176), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(0.5, 0.5, 0.5, 0.6))
+	draw_string(PIXEL_FONT, Vector2(2, 178), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.5, 0.5, 0.5, 0.6))

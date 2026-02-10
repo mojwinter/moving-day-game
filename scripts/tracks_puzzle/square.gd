@@ -21,10 +21,15 @@ const SLEEPER_COLOR := Color(0.5, 0.4, 0.1)
 const ERROR_COLOR := Color(1.0, 0.2, 0.2)
 const NOTRACK_COLOR := Color(0.45, 0.4, 0.35)
 const GRID_LINE_COLOR := Color(0.35, 0.33, 0.3)
+const HIGHLIGHT_COLOR := Color(0.95, 0.85, 0.3)  # warm gold for win highlight
 
 var grid_x: int = 0
 var grid_y: int = 0
 var square_data = null
+var highlight: float = 0.0:  # 0.0 = normal, 1.0 = full highlight (win animation)
+	set(v):
+		highlight = v
+		queue_redraw()
 
 
 func setup(x: int, y: int) -> void:
@@ -43,6 +48,8 @@ func _draw() -> void:
 	if square_data != null:
 		has_track = square_data.has_flag(TC.S_TRACK) or square_data.e_count(TC.E_TRACK) > 0
 	var bg: Color = BG_TRACK if has_track else BG_COLOR
+	if highlight > 0.0 and has_track:
+		bg = bg.lerp(HIGHLIGHT_COLOR, highlight * 0.4)
 	draw_rect(Rect2(0, 0, CELL_SIZE, CELL_SIZE), bg)
 
 	# Grid lines
@@ -56,6 +63,8 @@ func _draw() -> void:
 	var is_error: bool = square_data.has_flag(TC.S_ERROR)
 	var is_clue: bool = square_data.has_flag(TC.S_CLUE)
 	var track_col: Color = ERROR_COLOR if is_error else (CLUE_TRACK_COLOR if is_clue else TRACK_COLOR)
+	if highlight > 0.0 and has_track:
+		track_col = track_col.lerp(HIGHLIGHT_COLOR, highlight)
 
 	# Draw track shapes based on edge flags
 	var track_dirs: int = square_data.e_dirs(TC.E_TRACK)
@@ -95,23 +104,23 @@ func _draw_track_shape(flags: int, col: Color) -> void:
 
 
 func _draw_straight_h(col: Color) -> void:
-	# Sleepers first (behind rails)
-	for i in range(1, 8, 2):
-		var sx := CELL_SIZE / 8.0 * i
-		draw_line(Vector2(sx, T6), Vector2(sx, T6 + 2 * T3), SLEEPER_COLOR, 1.0)
+	# Sleepers first (between rails)
+	for i in range(5):
+		var sx := 2.0 + i * 4.0
+		draw_line(Vector2(sx, 6.0), Vector2(sx, 14.0), SLEEPER_COLOR, 1.0)
 	# Two horizontal rails
-	draw_line(Vector2(0, T3), Vector2(CELL_SIZE, T3), col, 1.0)
-	draw_line(Vector2(0, 2 * T3), Vector2(CELL_SIZE, 2 * T3), col, 1.0)
+	draw_line(Vector2(0, 6.0), Vector2(CELL_SIZE, 6.0), col, 1.0)
+	draw_line(Vector2(0, 14.0), Vector2(CELL_SIZE, 14.0), col, 1.0)
 
 
 func _draw_straight_v(col: Color) -> void:
-	# Sleepers
-	for i in range(1, 8, 2):
-		var sy := CELL_SIZE / 8.0 * i
-		draw_line(Vector2(T6, sy), Vector2(T6 + 2 * T3, sy), SLEEPER_COLOR, 1.0)
+	# Sleepers (between rails)
+	for i in range(5):
+		var sy := 2.0 + i * 4.0
+		draw_line(Vector2(6.0, sy), Vector2(14.0, sy), SLEEPER_COLOR, 1.0)
 	# Two vertical rails
-	draw_line(Vector2(T3, 0), Vector2(T3, CELL_SIZE), col, 1.0)
-	draw_line(Vector2(2 * T3, 0), Vector2(2 * T3, CELL_SIZE), col, 1.0)
+	draw_line(Vector2(6.0, 0), Vector2(6.0, CELL_SIZE), col, 1.0)
+	draw_line(Vector2(14.0, 0), Vector2(14.0, CELL_SIZE), col, 1.0)
 
 
 func _draw_curve(flags: int, col: Color) -> void:
@@ -137,30 +146,30 @@ func _draw_curve(flags: int, col: Color) -> void:
 	var nsleepers := 4
 	for i in range(nsleepers):
 		var th := start_angle + (end_angle - start_angle) * (float(i) + 0.5) / float(nsleepers)
-		var inner_pt := arc_center + Vector2(cos(th), sin(th)) * T3
-		var outer_pt := arc_center + Vector2(cos(th), sin(th)) * (2 * T3)
+		var inner_pt := arc_center + Vector2(cos(th), sin(th)) * 6.0
+		var outer_pt := arc_center + Vector2(cos(th), sin(th)) * 14.0
 		draw_line(inner_pt, outer_pt, SLEEPER_COLOR, 1.0)
 
-	# Draw inner and outer arcs
-	draw_arc(arc_center, T3, start_angle, end_angle, 12, col, 1.0)
-	draw_arc(arc_center, 2 * T3, start_angle, end_angle, 12, col, 1.0)
+	# Draw inner and outer arcs (radii match rail positions 6 and 14)
+	draw_arc(arc_center, 6.0, start_angle, end_angle, 12, col, 1.0)
+	draw_arc(arc_center, 14.0, start_angle, end_angle, 12, col, 1.0)
 
 
 func _draw_stub(d: int, col: Color) -> void:
 	# Draw a short track stub from center toward edge d
 	var half := CELL_SIZE / 2.0
 	if d == TC.DIR_L:
-		draw_line(Vector2(0, T3), Vector2(half, T3), col, 1.0)
-		draw_line(Vector2(0, 2 * T3), Vector2(half, 2 * T3), col, 1.0)
+		draw_line(Vector2(0, 6.0), Vector2(half, 6.0), col, 1.0)
+		draw_line(Vector2(0, 14.0), Vector2(half, 14.0), col, 1.0)
 	elif d == TC.DIR_R:
-		draw_line(Vector2(half, T3), Vector2(CELL_SIZE, T3), col, 1.0)
-		draw_line(Vector2(half, 2 * T3), Vector2(CELL_SIZE, 2 * T3), col, 1.0)
+		draw_line(Vector2(half, 6.0), Vector2(CELL_SIZE, 6.0), col, 1.0)
+		draw_line(Vector2(half, 14.0), Vector2(CELL_SIZE, 14.0), col, 1.0)
 	elif d == TC.DIR_U:
-		draw_line(Vector2(T3, 0), Vector2(T3, half), col, 1.0)
-		draw_line(Vector2(2 * T3, 0), Vector2(2 * T3, half), col, 1.0)
+		draw_line(Vector2(6.0, 0), Vector2(6.0, half), col, 1.0)
+		draw_line(Vector2(14.0, 0), Vector2(14.0, half), col, 1.0)
 	elif d == TC.DIR_D:
-		draw_line(Vector2(T3, half), Vector2(T3, CELL_SIZE), col, 1.0)
-		draw_line(Vector2(2 * T3, half), Vector2(2 * T3, CELL_SIZE), col, 1.0)
+		draw_line(Vector2(6.0, half), Vector2(6.0, CELL_SIZE), col, 1.0)
+		draw_line(Vector2(14.0, half), Vector2(14.0, CELL_SIZE), col, 1.0)
 
 
 func _draw_edge_notrack(d: int) -> void:
