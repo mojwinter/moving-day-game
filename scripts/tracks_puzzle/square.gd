@@ -52,9 +52,11 @@ func _draw() -> void:
 		bg = bg.lerp(HIGHLIGHT_COLOR, highlight * 0.4)
 	draw_rect(Rect2(0, 0, CELL_SIZE, CELL_SIZE), bg)
 
-	# Grid lines
+	# Grid lines (all 4 edges so right/bottom border is visible)
 	draw_line(Vector2(0, 0), Vector2(CELL_SIZE, 0), GRID_LINE_COLOR, 1.0)
 	draw_line(Vector2(0, 0), Vector2(0, CELL_SIZE), GRID_LINE_COLOR, 1.0)
+	draw_line(Vector2(CELL_SIZE, 0), Vector2(CELL_SIZE, CELL_SIZE), GRID_LINE_COLOR, 1.0)
+	draw_line(Vector2(0, CELL_SIZE), Vector2(CELL_SIZE, CELL_SIZE), GRID_LINE_COLOR, 1.0)
 
 	if square_data == null:
 		return

@@ -60,14 +60,6 @@ func _draw() -> void:
 	var font_size := 16
 	var vy := 6  # vertical centering offset for m3x6 at size 16
 
-	# Grid border (right and bottom edges)
-	var ox := GRID_OFFSET.x + CELL_SIZE
-	var oy := GRID_OFFSET.y + CELL_SIZE
-	var gw := GRID_W * CELL_SIZE
-	var gh := GRID_H * CELL_SIZE
-	draw_line(Vector2(ox + gw, oy), Vector2(ox + gw, oy + gh), Color(0.35, 0.33, 0.3), 1.0)
-	draw_line(Vector2(ox, oy + gh), Vector2(ox + gw, oy + gh), Color(0.35, 0.33, 0.3), 1.0)
-
 	# Column clues (above grid)
 	for x in range(GRID_W):
 		var num: int = grid_manager.clue_numbers[x]
