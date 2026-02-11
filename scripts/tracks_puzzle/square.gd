@@ -23,12 +23,32 @@ const NOTRACK_COLOR := Color(0.45, 0.4, 0.35)
 const GRID_LINE_COLOR := Color(0.35, 0.33, 0.3)
 const HIGHLIGHT_COLOR := Color(0.95, 0.85, 0.3)  # warm gold for win highlight
 
+# Decoration types
+const DECO_NONE := 0
+const DECO_TREE := 1
+const DECO_HOUSE := 2
+const DECO_WATER := 3
+
+# Decoration colors
+const TREE_GREEN := Color(0.2, 0.55, 0.2)
+const TREE_TRUNK := Color(0.45, 0.3, 0.15)
+const HOUSE_WALL := Color(0.6, 0.45, 0.3)
+const HOUSE_ROOF := Color(0.55, 0.25, 0.2)
+const HOUSE_WINDOW := Color(0.9, 0.85, 0.4)
+const WATER_COLOR := Color(0.25, 0.45, 0.7)
+const WATER_HIGHLIGHT := Color(0.4, 0.6, 0.85)
+
 var grid_x: int = 0
 var grid_y: int = 0
 var square_data = null
 var highlight: float = 0.0:  # 0.0 = normal, 1.0 = full highlight (win animation)
 	set(v):
 		highlight = v
+		queue_redraw()
+var decoration: int = DECO_NONE
+var deco_alpha: float = 0.0:
+	set(v):
+		deco_alpha = v
 		queue_redraw()
 
 
@@ -85,6 +105,10 @@ func _draw() -> void:
 		var d := 1 << i
 		if notrack_dirs & d:
 			_draw_edge_notrack(d)
+
+	# Decorations (on non-track cells after win)
+	if decoration != DECO_NONE and deco_alpha > 0.0:
+		_draw_decoration()
 
 
 func _draw_track_shape(flags: int, col: Color) -> void:
@@ -158,20 +182,20 @@ func _draw_curve(flags: int, col: Color) -> void:
 
 
 func _draw_stub(d: int, col: Color) -> void:
-	# Draw a short track stub from center toward edge d
-	var half := CELL_SIZE / 2.0
+	# Draw a short track stub from edge inward (~5px)
+	var stub_len := 5.0
 	if d == TC.DIR_L:
-		draw_line(Vector2(0, 6.0), Vector2(half, 6.0), col, 1.0)
-		draw_line(Vector2(0, 14.0), Vector2(half, 14.0), col, 1.0)
+		draw_line(Vector2(0, 6.0), Vector2(stub_len, 6.0), col, 1.0)
+		draw_line(Vector2(0, 14.0), Vector2(stub_len, 14.0), col, 1.0)
 	elif d == TC.DIR_R:
-		draw_line(Vector2(half, 6.0), Vector2(CELL_SIZE, 6.0), col, 1.0)
-		draw_line(Vector2(half, 14.0), Vector2(CELL_SIZE, 14.0), col, 1.0)
+		draw_line(Vector2(CELL_SIZE - stub_len, 6.0), Vector2(CELL_SIZE, 6.0), col, 1.0)
+		draw_line(Vector2(CELL_SIZE - stub_len, 14.0), Vector2(CELL_SIZE, 14.0), col, 1.0)
 	elif d == TC.DIR_U:
-		draw_line(Vector2(6.0, 0), Vector2(6.0, half), col, 1.0)
-		draw_line(Vector2(14.0, 0), Vector2(14.0, half), col, 1.0)
+		draw_line(Vector2(6.0, 0), Vector2(6.0, stub_len), col, 1.0)
+		draw_line(Vector2(14.0, 0), Vector2(14.0, stub_len), col, 1.0)
 	elif d == TC.DIR_D:
-		draw_line(Vector2(6.0, half), Vector2(6.0, CELL_SIZE), col, 1.0)
-		draw_line(Vector2(14.0, half), Vector2(14.0, CELL_SIZE), col, 1.0)
+		draw_line(Vector2(6.0, CELL_SIZE - stub_len), Vector2(6.0, CELL_SIZE), col, 1.0)
+		draw_line(Vector2(14.0, CELL_SIZE - stub_len), Vector2(14.0, CELL_SIZE), col, 1.0)
 
 
 func _draw_edge_notrack(d: int) -> void:
@@ -190,6 +214,62 @@ func _draw_edge_notrack(d: int) -> void:
 	var center := Vector2(cx, cy)
 	draw_line(center + Vector2(-off, -off), center + Vector2(off, off), NOTRACK_COLOR, 1.0)
 	draw_line(center + Vector2(-off, off), center + Vector2(off, -off), NOTRACK_COLOR, 1.0)
+
+
+func _draw_decoration() -> void:
+	match decoration:
+		DECO_TREE:
+			_draw_tree()
+		DECO_HOUSE:
+			_draw_house()
+		DECO_WATER:
+			_draw_water()
+
+
+func _draw_tree() -> void:
+	var green := Color(TREE_GREEN, deco_alpha)
+	var brown := Color(TREE_TRUNK, deco_alpha)
+	var cx := CELL_SIZE / 2.0
+	# Trunk: 2px wide, 4px tall
+	draw_rect(Rect2(cx - 1, 13, 2, 4), brown)
+	# Canopy: triangle
+	draw_colored_polygon(PackedVector2Array([
+		Vector2(cx, 3),
+		Vector2(cx - 5, 13),
+		Vector2(cx + 5, 13),
+	]), green)
+
+
+func _draw_house() -> void:
+	var wall := Color(HOUSE_WALL, deco_alpha)
+	var roof := Color(HOUSE_ROOF, deco_alpha)
+	var window := Color(HOUSE_WINDOW, deco_alpha)
+	var cx := CELL_SIZE / 2.0
+	# Walls
+	draw_rect(Rect2(cx - 5, 10, 10, 7), wall)
+	# Roof triangle
+	draw_colored_polygon(PackedVector2Array([
+		Vector2(cx, 3),
+		Vector2(cx - 6, 10),
+		Vector2(cx + 6, 10),
+	]), roof)
+	# Window
+	draw_rect(Rect2(cx - 1, 12, 2, 2), window)
+
+
+func _draw_water() -> void:
+	var col := Color(WATER_COLOR, deco_alpha)
+	var hi := Color(WATER_HIGHLIGHT, deco_alpha)
+	# Three wavy lines
+	draw_line(Vector2(4, 7), Vector2(8, 6), hi, 1.0)
+	draw_line(Vector2(8, 6), Vector2(12, 7), hi, 1.0)
+	draw_line(Vector2(12, 7), Vector2(16, 6), hi, 1.0)
+	draw_line(Vector2(3, 10), Vector2(7, 9), col, 1.0)
+	draw_line(Vector2(7, 9), Vector2(11, 10), col, 1.0)
+	draw_line(Vector2(11, 10), Vector2(15, 9), col, 1.0)
+	draw_line(Vector2(5, 13), Vector2(9, 12), col, 1.0)
+	draw_line(Vector2(9, 12), Vector2(13, 13), col, 1.0)
+	draw_line(Vector2(13, 13), Vector2(17, 12), col, 1.0)
 
 
 func _on_click_area_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:

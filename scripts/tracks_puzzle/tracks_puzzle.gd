@@ -17,6 +17,7 @@ const TC := preload("res://scripts/tracks_puzzle/tracks_consts.gd")
 var square_nodes := []
 var _solved := false
 var _win_tween: Tween = null
+var _deco_tween: Tween = null
 
 # Drag state
 var _drag_active := false
@@ -242,6 +243,45 @@ func _play_win_highlight() -> void:
 			sq_node.highlight = 1.0
 			tween.tween_property(sq_node, "highlight", 0.0, 0.8).set_delay(delay).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 			delay += 0.04
+	tween.finished.connect(_spawn_decorations)
+
+
+func _spawn_decorations() -> void:
+	# Collect empty (non-track) cell indices
+	var empty_indices := []
+	for y in range(GRID_H):
+		for x in range(GRID_W):
+			var idx := y * GRID_W + x
+			var sq_data = grid_manager.squares[idx]
+			var has_track: bool = sq_data.has_flag(TC.S_TRACK) or sq_data.e_count(TC.E_TRACK) > 0
+			if not has_track:
+				empty_indices.append(idx)
+
+	if empty_indices.is_empty():
+		return
+
+	# Pick random 60-80% subset
+	empty_indices.shuffle()
+	var deco_count := maxi(int(empty_indices.size() * randf_range(0.6, 0.8)), 1)
+	var selected := empty_indices.slice(0, deco_count)
+	selected.sort()
+
+	# Assign random decoration types
+	var types := [square_nodes[0].DECO_TREE, square_nodes[0].DECO_HOUSE, square_nodes[0].DECO_WATER]
+	for idx in selected:
+		square_nodes[idx].decoration = types[randi() % types.size()]
+
+	# Staggered fade-in
+	if _deco_tween and _deco_tween.is_valid():
+		_deco_tween.kill()
+	_deco_tween = create_tween()
+	_deco_tween.set_parallel(true)
+	var delay := 0.0
+	for idx in selected:
+		var sq_node = square_nodes[idx]
+		sq_node.deco_alpha = 0.0
+		_deco_tween.tween_property(sq_node, "deco_alpha", 1.0, 0.3).set_delay(delay).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		delay += 0.06
 
 
 func _on_new_game_pressed() -> void:
@@ -251,6 +291,9 @@ func _on_new_game_pressed() -> void:
 	if _win_tween and _win_tween.is_valid():
 		_win_tween.kill()
 		_win_tween = null
+	if _deco_tween and _deco_tween.is_valid():
+		_deco_tween.kill()
+		_deco_tween = null
 	for sq_node in square_nodes:
 		sq_node.queue_free()
 	square_nodes.clear()
