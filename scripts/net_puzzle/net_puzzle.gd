@@ -2,8 +2,8 @@ extends Node2D
 ## Scene controller for the Night 3 Net/Rotation puzzle.
 ## Manages 3 sequential stages: Rotation -> Trace (Solder) -> Calibration.
 
-const CELL_SIZE := 32
-const GRID_OFFSET := Vector2(80, 10)
+const CELL_SIZE := 20
+const GRID_OFFSET := Vector2(110, 30)
 const GRID_W := 5
 const GRID_H := 5
 const NEW_BTN_RECT := Rect2(2, 2, 24, 12)
@@ -17,6 +17,7 @@ enum Stage { ROTATION, TRACE, CALIBRATION }
 
 var tile_nodes := []
 var current_stage: int = Stage.ROTATION
+var _win_tween: Tween = null
 
 # --- Trace stage state ---
 var is_dragging := false
@@ -98,8 +99,8 @@ func _unhandled_input(event: InputEvent) -> void:
 # =========================================================================
 
 func _on_puzzle_solved() -> void:
-	# Rotation stage complete -> move to trace
-	_enter_trace_stage()
+	# Rotation stage complete -> play highlight then move to trace
+	_play_win_highlight(_enter_trace_stage)
 
 
 func _enter_trace_stage() -> void:
@@ -170,7 +171,7 @@ func _check_trace_win() -> void:
 		if (tile.connections & 0x0F) != 0 and not tile.is_soldered:
 			return
 	# All connected tiles soldered
-	_enter_calibration_stage()
+	_play_win_highlight(_enter_calibration_stage)
 
 
 # =========================================================================
@@ -285,7 +286,29 @@ func _check_calibration_win() -> void:
 	for i in range(pot_positions.size()):
 		if _pot_error(i) > POT_WIN_TOLERANCE:
 			return
-	_on_all_stages_complete()
+	_play_win_highlight(_on_all_stages_complete)
+
+
+# =========================================================================
+# Win animation
+# =========================================================================
+
+func _play_win_highlight(next_callback: Callable) -> void:
+	if _win_tween and _win_tween.is_valid():
+		_win_tween.kill()
+	_win_tween = create_tween()
+	_win_tween.set_parallel(true)
+	var delay := 0.0
+	for y in range(GRID_H):
+		for x in range(GRID_W):
+			var idx := y * GRID_W + x
+			if (grid_manager.tiles[idx].connections & 0x0F) == 0:
+				continue
+			var node = tile_nodes[idx]
+			node.highlight = 1.0
+			_win_tween.tween_property(node, "highlight", 0.0, 0.6).set_delay(delay).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			delay += 0.03
+	_win_tween.finished.connect(next_callback)
 
 
 # =========================================================================
@@ -320,6 +343,9 @@ func _on_new_game_pressed() -> void:
 	is_dragging = false
 	active_pot_index = -1
 	pot_positions.clear()
+	if _win_tween and _win_tween.is_valid():
+		_win_tween.kill()
+		_win_tween = null
 	# Remove old tile nodes
 	for tile_node in tile_nodes:
 		tile_node.queue_free()
