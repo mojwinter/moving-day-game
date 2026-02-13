@@ -9,7 +9,7 @@ const NEW_BTN_RECT := Rect2(2, 2, 24, 12)
 const EDGE_CLICK_DIST := 5.0
 const DOT_RADIUS := 1.5
 const LINE_WIDTH := 1.0
-const NO_MARK_SIZE := 2.0
+const NO_MARK_SIZE := 4.0
 
 # Constellation theme colours
 const COL_BG := Color(0.05, 0.05, 0.15)
@@ -71,8 +71,8 @@ func _draw() -> void:
 			var col := COL_WIN_GLOW.lerp(COL_EDGE_YES, 1.0 - _win_alpha) if _solved else COL_EDGE_YES
 			draw_line(d1, d2, col, LINE_WIDTH)
 		elif state == LC.LINE_NO:
-			# Small X at midpoint
-			var mid := (d1 + d2) * 0.5
+			# X at midpoint
+			var mid := Vector2(roundf((d1.x + d2.x) * 0.5), roundf((d1.y + d2.y) * 0.5))
 			var hs := NO_MARK_SIZE * 0.5
 			draw_line(mid + Vector2(-hs, -hs), mid + Vector2(hs, hs), COL_EDGE_NO, 1.0)
 			draw_line(mid + Vector2(hs, -hs), mid + Vector2(-hs, hs), COL_EDGE_NO, 1.0)
