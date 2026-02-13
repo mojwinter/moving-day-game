@@ -26,7 +26,9 @@ const COL_WIN_GLOW := Color(1.0, 0.95, 0.7)
 
 var _solved := false
 var _win_tween: Tween = null
-var _win_alpha := 0.0 # pulsing glow intensity during win
+var _win_alpha := 0.0   # glow intensity for loop edges/dots
+var _win_fade := 0.0    # 0 = normal, 1 = non-loop elements fully hidden
+var _win_shimmer := 0.0 # continuous time for twinkle effect on loop dots
 
 # Background star positions (random tiny dots for ambiance)
 var _bg_stars: Array = []
@@ -58,6 +60,9 @@ func _draw() -> void:
 
 	var grid = grid_manager.grid
 
+	# During win: _win_fade hides non-loop elements, _win_alpha glows the loop
+	var fade_out := 1.0 - _win_fade  # multiplier for non-loop element opacity
+
 	# Edges
 	for ei in range(grid.num_edges):
 		var d1: Vector2 = grid.dots[grid.edges[ei].x]
@@ -68,45 +73,51 @@ func _draw() -> void:
 		if err:
 			draw_line(d1, d2, COL_EDGE_ERROR, LINE_WIDTH)
 		elif state == LC.LINE_YES:
-			var col := COL_WIN_GLOW.lerp(COL_EDGE_YES, 1.0 - _win_alpha) if _solved else COL_EDGE_YES
-			draw_line(d1, d2, col, LINE_WIDTH)
+			var base_col := COL_EDGE_YES.lerp(COL_WIN_GLOW, _win_alpha)
+			draw_line(d1, d2, base_col, LINE_WIDTH)
 		elif state == LC.LINE_NO:
-			# X at midpoint
-			var mid := Vector2(roundf((d1.x + d2.x) * 0.5), roundf((d1.y + d2.y) * 0.5))
-			var hs := NO_MARK_SIZE * 0.5
-			draw_line(mid + Vector2(-hs, -hs), mid + Vector2(hs, hs), COL_EDGE_NO, 1.0)
-			draw_line(mid + Vector2(hs, -hs), mid + Vector2(-hs, hs), COL_EDGE_NO, 1.0)
+			if fade_out > 0.01:
+				var mid := Vector2(roundf((d1.x + d2.x) * 0.5), roundf((d1.y + d2.y) * 0.5))
+				var hs := NO_MARK_SIZE * 0.5
+				var c := Color(COL_EDGE_NO, COL_EDGE_NO.a * fade_out)
+				draw_line(mid + Vector2(-hs, -hs), mid + Vector2(hs, hs), c, 1.0)
+				draw_line(mid + Vector2(hs, -hs), mid + Vector2(-hs, hs), c, 1.0)
 		else:
-			draw_line(d1, d2, COL_EDGE_UNKNOWN, LINE_WIDTH)
+			if fade_out > 0.01:
+				draw_line(d1, d2, Color(COL_EDGE_UNKNOWN, COL_EDGE_UNKNOWN.a * fade_out), LINE_WIDTH)
 
-	# Dots (stars)
+	# Dots (stars) – on loop dots, shimmer during win
 	for di in range(grid.num_dots):
 		var p: Vector2 = grid.dots[di]
-		var col := COL_WIN_GLOW.lerp(COL_DOT, 1.0 - _win_alpha * 0.5) if _solved else COL_DOT
-		draw_circle(p, DOT_RADIUS, col)
+		if _solved and _win_shimmer > 0.0:
+			# Twinkle: sin wave offset by dot position for variety
+			var twinkle := sin(_win_shimmer * 3.0 + p.x * 0.3 + p.y * 0.2) * 0.5 + 0.5
+			var col := COL_DOT.lerp(COL_WIN_GLOW, twinkle * _win_alpha)
+			draw_circle(p, DOT_RADIUS, col)
+		else:
+			draw_circle(p, DOT_RADIUS, COL_DOT)
 
-	# Face clues
-	var font_size := 16
-	for fi in range(grid.num_faces):
-		var c: int = grid_manager.clues[fi]
-		if c < 0:
-			continue
-		var center: Vector2 = grid.face_centroid(fi)
-		var txt := str(c)
-		var ts := PIXEL_FONT.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
+	# Face clues – fade out during win
+	if fade_out > 0.01:
+		var font_size := 16
+		for fi in range(grid.num_faces):
+			var c: int = grid_manager.clues[fi]
+			if c < 0:
+				continue
+			var center: Vector2 = grid.face_centroid(fi)
+			var txt := str(c)
+			var ts := PIXEL_FONT.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
 
-		# Determine if clue is satisfied
-		var yes_count := 0
-		for ei: int in grid.face_edges[fi]:
-			if grid_manager.lines[ei] == LC.LINE_YES:
-				yes_count += 1
-		var col := COL_CLUE_SAT if yes_count == c else COL_CLUE
+			var yes_count := 0
+			for ei: int in grid.face_edges[fi]:
+				if grid_manager.lines[ei] == LC.LINE_YES:
+					yes_count += 1
+			var base_col := COL_CLUE_SAT if yes_count == c else COL_CLUE
+			var col := Color(base_col, base_col.a * fade_out)
 
-		# draw_string y = baseline; ascent=11 descent=2 at size 16.
-		# Visual glyph centre ≈ baseline - 4 (glyphs ~6px tall near bottom of ascent).
-		var tx := roundf(center.x - ts.x * 0.5)
-		var ty := roundf(center.y + 3.0)
-		draw_string(PIXEL_FONT, Vector2(tx, ty), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, col)
+			var tx := roundf(center.x - ts.x * 0.5)
+			var ty := roundf(center.y + 3.0)
+			draw_string(PIXEL_FONT, Vector2(tx, ty), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, col)
 
 	# New button
 	_draw_new_button()
@@ -200,22 +211,27 @@ func _play_win_highlight() -> void:
 	if _win_tween and _win_tween.is_valid():
 		_win_tween.kill()
 	_win_tween = create_tween()
-	# Pulse the glow twice then settle
-	_win_tween.tween_property(self, "_win_alpha", 1.0, 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	_win_tween.tween_property(self, "_win_alpha", 0.3, 0.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	_win_tween.tween_property(self, "_win_alpha", 0.8, 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	_win_tween.tween_property(self, "_win_alpha", 0.0, 1.0).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	_win_tween.tween_callback(queue_redraw)
+	# Phase 1: fade out non-loop elements (edges, X marks, clues)
+	_win_tween.tween_property(self, "_win_fade", 1.0, 0.8).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	# Phase 2: glow the loop golden
+	_win_tween.tween_property(self, "_win_alpha", 1.0, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	# Phase 3: settle to a gentle sustained glow (shimmer keeps running)
+	_win_tween.tween_property(self, "_win_alpha", 0.6, 0.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
-func _process(_delta: float) -> void:
-	if _win_tween and _win_tween.is_valid():
+func _process(delta: float) -> void:
+	if _solved:
+		_win_shimmer += delta
+		queue_redraw()
+	elif _win_tween and _win_tween.is_valid():
 		queue_redraw()
 
 
 func _on_new_game_pressed() -> void:
 	_solved = false
 	_win_alpha = 0.0
+	_win_fade = 0.0
+	_win_shimmer = 0.0
 	if _win_tween and _win_tween.is_valid():
 		_win_tween.kill()
 		_win_tween = null
