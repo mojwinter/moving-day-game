@@ -14,3 +14,12 @@ export_credentials.cfg
 .mono/
 data_*/
 mono_crash.*.json
+
+# GDExtension build artifacts
+.sconsign.dblite
+*.obj
+*.os
+bin/windows/
+bin/linux/
+bin/macos/
+godot-cpp/bin/
