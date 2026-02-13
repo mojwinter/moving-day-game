@@ -40,6 +40,10 @@ typedef struct {
     int *face_edges_flat;      /* flattened edge lists */
     int *face_edges_offsets;   /* size num_faces+1 */
 
+    /* Face incentre (centre of largest inscribed circle) in grid coords.
+     * Better label placement than vertex average for concave shapes. */
+    int *face_ix, *face_iy;
+
     /* Clues: per-face, -1 means no clue shown */
     signed char *clues;
 } LoopyPuzzleData;

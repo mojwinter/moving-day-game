@@ -22,13 +22,17 @@ var face_order: Array = [] # number of edges per face
 var num_faces: int = 0
 
 
-## Compute the centroid of face i (average of its vertex positions).
+## Face incentres (centre of largest inscribed circle), computed by Tatham's
+## grid_find_incentre() and pre-scaled to viewport coords by the native plugin.
+## Falls back to vertex average if not populated.
+var face_incentres: Array = []  # Array of Vector2
+
 func face_centroid(face_idx: int) -> Vector2:
+	if face_idx < face_incentres.size():
+		return face_incentres[face_idx]
+	# Fallback: vertex average
 	var verts: Array = face_dots[face_idx]
-	var cx := 0.0
-	var cy := 0.0
+	var s := Vector2.ZERO
 	for di in verts:
-		cx += dots[di].x
-		cy += dots[di].y
-	var n := float(verts.size())
-	return Vector2(cx / n, cy / n)
+		s += Vector2(dots[di])
+	return s / float(verts.size())

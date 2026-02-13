@@ -139,6 +139,17 @@ Dictionary LoopyNative::generate_puzzle(int w, int h) {
     result["face_edges_flat"] = face_edges_flat;
     result["face_edges_offsets"] = face_edges_offsets;
 
+    /* Face incentres: scaled to viewport coords, same as dots */
+    PackedFloat32Array face_ix, face_iy;
+    face_ix.resize(data->num_faces);
+    face_iy.resize(data->num_faces);
+    for (int i = 0; i < data->num_faces; i++) {
+        face_ix[i] = (float)(data->face_ix[i] - data->lowest_x) * scale + off_x;
+        face_iy[i] = (float)(data->face_iy[i] - data->lowest_y) * scale + off_y;
+    }
+    result["face_ix"] = face_ix;
+    result["face_iy"] = face_iy;
+
     /* Clues: per-face, -1 = hidden */
     PackedInt32Array clues;
     clues.resize(data->num_faces);

@@ -102,10 +102,11 @@ func _draw() -> void:
 				yes_count += 1
 		var col := COL_CLUE_SAT if yes_count == c else COL_CLUE
 
-		var ascent := PIXEL_FONT.get_ascent(font_size)
-		var descent := PIXEL_FONT.get_descent(font_size)
-		var text_h := ascent + descent
-		draw_string(PIXEL_FONT, Vector2(center.x - ts.x * 0.5, center.y - text_h * 0.5 + ascent), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, col)
+		# draw_string y = baseline; ascent=11 descent=2 at size 16.
+		# Visual glyph centre ≈ baseline - 4 (glyphs ~6px tall near bottom of ascent).
+		var tx := roundf(center.x - ts.x * 0.5)
+		var ty := roundf(center.y + 3.0)
+		draw_string(PIXEL_FONT, Vector2(tx, ty), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, col)
 
 	# New button
 	_draw_new_button()

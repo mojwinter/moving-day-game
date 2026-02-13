@@ -302,6 +302,15 @@ LoopyPuzzleData *loopy_generate(int w, int h, int grid_type, int diff) {
     }
     data->face_edges_offsets[g->num_faces] = offset;
 
+    /* --- Face incentres --- */
+    data->face_ix = (int *)malloc(g->num_faces * sizeof(int));
+    data->face_iy = (int *)malloc(g->num_faces * sizeof(int));
+    for (i = 0; i < g->num_faces; i++) {
+        grid_find_incentre(&g->faces[i]);
+        data->face_ix[i] = g->faces[i].ix;
+        data->face_iy[i] = g->faces[i].iy;
+    }
+
     /* --- Clues --- */
     data->clues = (signed char *)malloc(g->num_faces * sizeof(signed char));
     memcpy(data->clues, state->clues, g->num_faces * sizeof(signed char));
@@ -333,6 +342,8 @@ void loopy_free_data(LoopyPuzzleData *data) {
     free(data->face_dots_offsets);
     free(data->face_edges_flat);
     free(data->face_edges_offsets);
+    free(data->face_ix);
+    free(data->face_iy);
     free(data->clues);
     free(data);
 }

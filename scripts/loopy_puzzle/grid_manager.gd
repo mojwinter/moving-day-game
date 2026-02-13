@@ -110,6 +110,14 @@ func generate_puzzle() -> void:
 			arr.append(fe_flat[j])
 		grid.face_edges[i] = arr
 
+	# Face incentres (pre-scaled to viewport)
+	if data.has("face_ix"):
+		var fix: PackedFloat32Array = data["face_ix"]
+		var fiy: PackedFloat32Array = data["face_iy"]
+		grid.face_incentres.resize(grid.num_faces)
+		for i in range(grid.num_faces):
+			grid.face_incentres[i] = Vector2(fix[i], fiy[i])
+
 	# Clues
 	var c_arr: PackedInt32Array = data["clues"]
 	clues.resize(grid.num_faces)
