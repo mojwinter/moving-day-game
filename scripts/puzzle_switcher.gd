@@ -7,6 +7,7 @@ const PIXEL_FONT := preload("res://assets/fonts/m3x6.ttf")
 var _puzzle_scenes := {
 	KEY_1: "res://scenes/net_puzzle/net_puzzle.tscn",
 	KEY_2: "res://scenes/tracks_puzzle/tracks_puzzle.tscn",
+	KEY_3: "res://scenes/loopy_puzzle/loopy_puzzle.tscn",
 }
 
 var _current_key: int = KEY_2
@@ -36,5 +37,5 @@ func _load_puzzle(key: int) -> void:
 
 
 func _draw() -> void:
-	var hint: String = "[1] Circuit  [2] Tracks"
+	var hint: String = "[1] Circuit  [2] Tracks  [3] Stars"
 	draw_string(PIXEL_FONT, Vector2(2, 178), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.5, 0.5, 0.5, 0.6))
