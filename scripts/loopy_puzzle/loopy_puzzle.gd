@@ -1,15 +1,21 @@
 extends Node2D
 ## Scene controller for the Night 4 Constellation (Loopy on Penrose P2) puzzle.
-## Draws the grid, handles nearest-edge input, and plays win animation.
+## Presents 3 sequential puzzles with auto-scroll on solve.
 
 const PIXEL_FONT := preload("res://assets/fonts/m3x6.ttf")
 const LC := preload("res://scripts/loopy_puzzle/loopy_consts.gd")
+const GridManagerScript := preload("res://scripts/loopy_puzzle/grid_manager.gd")
 
 const NEW_BTN_RECT := Rect2(2, 2, 24, 12)
 const EDGE_CLICK_DIST := 5.0
 const DOT_RADIUS := 1.5
 const LINE_WIDTH := 1.0
 const NO_MARK_SIZE := 4.0
+
+const PUZZLE_COUNT := 3
+const VIEWPORT_W := 320.0
+const VIEWPORT_H := 180.0
+const TOTAL_W := VIEWPORT_W * PUZZLE_COUNT
 
 # Constellation theme colours
 const COL_BG := Color(0.05, 0.05, 0.15)
@@ -22,23 +28,39 @@ const COL_CLUE := Color(0.7, 0.75, 0.85)
 const COL_CLUE_SAT := Color(0.4, 0.6, 0.4)
 const COL_WIN_GLOW := Color(1.0, 0.95, 0.7)
 
-@onready var grid_manager = $GridManager
 
-var _solved := false
-var _win_tween: Tween = null
-var _win_alpha := 0.0   # glow intensity for loop edges/dots
-var _win_fade := 0.0    # 0 = normal, 1 = non-loop elements fully hidden
-var _win_shimmer := 0.0 # continuous time for twinkle effect on loop dots
+class PuzzleSlot:
+	var grid_manager: Node = null
+	var solved := false
+	var win_tween: Tween = null
+	var win_alpha := 0.0
+	var win_fade := 0.0
+	var win_shimmer := 0.0
 
-# Background star positions (random tiny dots for ambiance)
+
+var _slots: Array = []
+var _scroll_x := 0.0
+var _scroll_target := 0.0
+var _current_puzzle := 0
+var _scrolling := false
+
+# Background star positions (random tiny dots for ambiance) spanning full width
 var _bg_stars: Array = []
 
 
 func _ready() -> void:
 	_generate_bg_stars()
-	grid_manager.generate_puzzle()
-	grid_manager.puzzle_solved.connect(_on_puzzle_solved)
-	grid_manager.grid_changed.connect(_on_grid_changed)
+	for i in range(PUZZLE_COUNT):
+		var slot := PuzzleSlot.new()
+		var gm := Node.new()
+		gm.set_script(GridManagerScript)
+		gm.name = "GridManager%d" % i
+		add_child(gm)
+		slot.grid_manager = gm
+		gm.puzzle_solved.connect(_on_puzzle_solved.bind(i))
+		gm.grid_changed.connect(_on_grid_changed)
+		gm.generate_puzzle()
+		_slots.append(slot)
 	queue_redraw()
 
 
@@ -48,32 +70,48 @@ func _ready() -> void:
 
 func _draw() -> void:
 	# Background
-	draw_rect(Rect2(0, 0, 320, 180), COL_BG)
+	draw_rect(Rect2(0, 0, VIEWPORT_W, VIEWPORT_H), COL_BG)
 
-	# Background stars (ambient)
-	for s in _bg_stars:
-		draw_rect(Rect2(s.x, s.y, 1, 1), Color(1.0, 1.0, 1.0, s.z))
+	# Background stars (in world space, shifted by scroll)
+	for s: Vector3 in _bg_stars:
+		var sx := s.x - _scroll_x
+		if sx >= -1.0 and sx <= VIEWPORT_W:
+			draw_rect(Rect2(sx, s.y, 1, 1), Color(1.0, 1.0, 1.0, s.z))
 
-	if grid_manager.grid == null:
-		_draw_new_button()
+	# Draw each puzzle with offset
+	for i in range(PUZZLE_COUNT):
+		var offset_x := i * VIEWPORT_W - _scroll_x
+		# Frustum cull: skip puzzles entirely off-screen
+		if offset_x < -VIEWPORT_W or offset_x > VIEWPORT_W:
+			continue
+		_draw_puzzle(_slots[i], offset_x)
+
+	# Progress indicator dots
+	_draw_page_indicators()
+
+	# New button
+	_draw_new_button()
+
+
+func _draw_puzzle(slot: PuzzleSlot, offset_x: float) -> void:
+	var gm := slot.grid_manager
+	if gm.grid == null:
 		return
-
-	var grid = grid_manager.grid
-
-	# During win: _win_fade hides non-loop elements, _win_alpha glows the loop
-	var fade_out := 1.0 - _win_fade  # multiplier for non-loop element opacity
+	var grid = gm.grid
+	var off := Vector2(offset_x, 0)
+	var fade_out := 1.0 - slot.win_fade
 
 	# Edges
 	for ei in range(grid.num_edges):
-		var d1: Vector2 = grid.dots[grid.edges[ei].x]
-		var d2: Vector2 = grid.dots[grid.edges[ei].y]
-		var state: int = grid_manager.lines[ei]
-		var err: bool = grid_manager.line_errors[ei]
+		var d1: Vector2 = grid.dots[grid.edges[ei].x] + off
+		var d2: Vector2 = grid.dots[grid.edges[ei].y] + off
+		var state: int = gm.lines[ei]
+		var err: bool = gm.line_errors[ei]
 
 		if err:
 			draw_line(d1, d2, COL_EDGE_ERROR, LINE_WIDTH)
 		elif state == LC.LINE_YES:
-			var base_col := COL_EDGE_YES.lerp(COL_WIN_GLOW, _win_alpha)
+			var base_col := COL_EDGE_YES.lerp(COL_WIN_GLOW, slot.win_alpha)
 			draw_line(d1, d2, base_col, LINE_WIDTH)
 		elif state == LC.LINE_NO:
 			if fade_out > 0.01:
@@ -86,13 +124,12 @@ func _draw() -> void:
 			if fade_out > 0.01:
 				draw_line(d1, d2, Color(COL_EDGE_UNKNOWN, COL_EDGE_UNKNOWN.a * fade_out), LINE_WIDTH)
 
-	# Dots (stars) – on loop dots, shimmer during win
+	# Dots (stars) – shimmer during win
 	for di in range(grid.num_dots):
-		var p: Vector2 = grid.dots[di]
-		if _solved and _win_shimmer > 0.0:
-			# Twinkle: sin wave offset by dot position for variety
-			var twinkle := sin(_win_shimmer * 3.0 + p.x * 0.3 + p.y * 0.2) * 0.5 + 0.5
-			var col := COL_DOT.lerp(COL_WIN_GLOW, twinkle * _win_alpha)
+		var p: Vector2 = grid.dots[di] + off
+		if slot.solved and slot.win_shimmer > 0.0:
+			var twinkle := sin(slot.win_shimmer * 3.0 + grid.dots[di].x * 0.3 + grid.dots[di].y * 0.2) * 0.5 + 0.5
+			var col := COL_DOT.lerp(COL_WIN_GLOW, twinkle * slot.win_alpha)
 			draw_circle(p, DOT_RADIUS, col)
 		else:
 			draw_circle(p, DOT_RADIUS, COL_DOT)
@@ -101,16 +138,16 @@ func _draw() -> void:
 	if fade_out > 0.01:
 		var font_size := 16
 		for fi in range(grid.num_faces):
-			var c: int = grid_manager.clues[fi]
+			var c: int = gm.clues[fi]
 			if c < 0:
 				continue
-			var center: Vector2 = grid.face_centroid(fi)
+			var center: Vector2 = grid.face_centroid(fi) + off
 			var txt := str(c)
 			var ts := PIXEL_FONT.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
 
 			var yes_count := 0
 			for ei: int in grid.face_edges[fi]:
-				if grid_manager.lines[ei] == LC.LINE_YES:
+				if gm.lines[ei] == LC.LINE_YES:
 					yes_count += 1
 			var base_col := COL_CLUE_SAT if yes_count == c else COL_CLUE
 			var col := Color(base_col, base_col.a * fade_out)
@@ -118,9 +155,6 @@ func _draw() -> void:
 			var tx := roundf(center.x - ts.x * 0.5)
 			var ty := roundf(center.y + 3.0)
 			draw_string(PIXEL_FONT, Vector2(tx, ty), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, col)
-
-	# New button
-	_draw_new_button()
 
 
 func _draw_new_button() -> void:
@@ -137,10 +171,27 @@ func _draw_new_button() -> void:
 	draw_string(PIXEL_FONT, Vector2(tx, ty), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0.8, 0.8, 0.7))
 
 
+func _draw_page_indicators() -> void:
+	var y := VIEWPORT_H - 6.0
+	var spacing := 8.0
+	var total_w := PUZZLE_COUNT * spacing
+	var start_x := (VIEWPORT_W - total_w) * 0.5
+	for i in range(PUZZLE_COUNT):
+		var cx := start_x + i * spacing + spacing * 0.5
+		var col: Color
+		if _slots[i].solved:
+			col = COL_WIN_GLOW
+		elif i == _current_puzzle:
+			col = COL_DOT
+		else:
+			col = Color(COL_DOT, 0.3)
+		draw_circle(Vector2(cx, y), 1.5, col)
+
+
 func _generate_bg_stars() -> void:
 	_bg_stars.clear()
-	for _i in range(40):
-		_bg_stars.append(Vector3(randf() * 320.0, randf() * 180.0, randf_range(0.05, 0.25)))
+	for _i in range(120):
+		_bg_stars.append(Vector3(randf() * TOTAL_W, randf() * VIEWPORT_H, randf_range(0.05, 0.25)))
 
 
 # ===========================================================================
@@ -156,21 +207,27 @@ func _input(event: InputEvent) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _solved:
+	if _scrolling:
 		return
-	if grid_manager.grid == null:
+	if _current_puzzle < 0 or _current_puzzle >= _slots.size():
+		return
+	var slot: PuzzleSlot = _slots[_current_puzzle]
+	if slot.solved:
+		return
+	if slot.grid_manager.grid == null:
 		return
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_LEFT or event.button_index == MOUSE_BUTTON_RIGHT:
 			var local: Vector2 = event.global_position - global_position
-			var ei := _find_nearest_edge(local)
+			# Offset click into the current puzzle's local space
+			var puzzle_local := Vector2(local.x + _scroll_x - _current_puzzle * VIEWPORT_W, local.y)
+			var ei := _find_nearest_edge(slot.grid_manager.grid, puzzle_local)
 			if ei >= 0:
 				var use_yes: bool = (event.button_index == MOUSE_BUTTON_LEFT)
-				grid_manager.toggle_edge(ei, use_yes)
+				slot.grid_manager.toggle_edge(ei, use_yes)
 
 
-func _find_nearest_edge(local_pos: Vector2) -> int:
-	var grid = grid_manager.grid
+func _find_nearest_edge(grid, local_pos: Vector2) -> int:
 	var best_dist := 999.0
 	var best_edge := -1
 	for i in range(grid.num_edges):
@@ -202,39 +259,67 @@ func _on_grid_changed() -> void:
 	queue_redraw()
 
 
-func _on_puzzle_solved() -> void:
-	_solved = true
-	_play_win_highlight()
+func _on_puzzle_solved(puzzle_idx: int) -> void:
+	var slot: PuzzleSlot = _slots[puzzle_idx]
+	slot.solved = true
+	_play_win_highlight(slot, puzzle_idx)
 
 
-func _play_win_highlight() -> void:
-	if _win_tween and _win_tween.is_valid():
-		_win_tween.kill()
-	_win_tween = create_tween()
-	# Phase 1: fade out non-loop elements (edges, X marks, clues)
-	_win_tween.tween_property(self, "_win_fade", 1.0, 0.8).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+func _play_win_highlight(slot: PuzzleSlot, puzzle_idx: int) -> void:
+	if slot.win_tween and slot.win_tween.is_valid():
+		slot.win_tween.kill()
+	slot.win_tween = create_tween()
+	# Phase 1: fade out non-loop elements
+	slot.win_tween.tween_method(func(v): slot.win_fade = v; queue_redraw(), 0.0, 1.0, 0.8) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	# Phase 2: glow the loop golden
-	_win_tween.tween_property(self, "_win_alpha", 1.0, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	# Phase 3: settle to a gentle sustained glow (shimmer keeps running)
-	_win_tween.tween_property(self, "_win_alpha", 0.6, 0.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	slot.win_tween.tween_method(func(v): slot.win_alpha = v; queue_redraw(), 0.0, 1.0, 0.5) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	# Phase 3: settle to sustained glow
+	slot.win_tween.tween_method(func(v): slot.win_alpha = v; queue_redraw(), 1.0, 0.6, 0.4) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	# Phase 4: auto-scroll to next puzzle (if not the last)
+	if puzzle_idx < PUZZLE_COUNT - 1:
+		slot.win_tween.tween_callback(_start_scroll_to_next.bind(puzzle_idx))
+
+
+func _start_scroll_to_next(from_idx: int) -> void:
+	_current_puzzle = from_idx + 1
+	_scroll_target = _current_puzzle * VIEWPORT_W
+	_scrolling = true
 
 
 func _process(delta: float) -> void:
-	if _solved:
-		_win_shimmer += delta
+	# Smooth scroll toward target
+	if _scrolling:
+		_scroll_x = lerpf(_scroll_x, _scroll_target, 1.0 - exp(-3.0 * delta))
+		if absf(_scroll_x - _scroll_target) < 0.5:
+			_scroll_x = _scroll_target
+			_scrolling = false
 		queue_redraw()
-	elif _win_tween and _win_tween.is_valid():
+
+	# Per-puzzle win animation updates
+	var needs_redraw := false
+	for slot in _slots:
+		if slot.solved:
+			slot.win_shimmer += delta
+			needs_redraw = true
+		elif slot.win_tween and slot.win_tween.is_valid():
+			needs_redraw = true
+	if needs_redraw:
 		queue_redraw()
 
 
 func _on_new_game_pressed() -> void:
-	_solved = false
-	_win_alpha = 0.0
-	_win_fade = 0.0
-	_win_shimmer = 0.0
-	if _win_tween and _win_tween.is_valid():
-		_win_tween.kill()
-		_win_tween = null
-	_generate_bg_stars()
-	grid_manager.generate_puzzle()
+	if _current_puzzle < 0 or _current_puzzle >= _slots.size():
+		return
+	var slot: PuzzleSlot = _slots[_current_puzzle]
+	slot.solved = false
+	slot.win_alpha = 0.0
+	slot.win_fade = 0.0
+	slot.win_shimmer = 0.0
+	if slot.win_tween and slot.win_tween.is_valid():
+		slot.win_tween.kill()
+		slot.win_tween = null
+	slot.grid_manager.generate_puzzle()
 	queue_redraw()
