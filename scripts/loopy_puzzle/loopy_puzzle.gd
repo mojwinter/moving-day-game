@@ -59,8 +59,11 @@ func _ready() -> void:
 		slot.grid_manager = gm
 		gm.puzzle_solved.connect(_on_puzzle_solved.bind(i))
 		gm.grid_changed.connect(_on_grid_changed)
-		gm.generate_puzzle()
 		_slots.append(slot)
+	# Generate first puzzle immediately, stagger the rest so each gets a different time-based seed
+	_slots[0].grid_manager.generate_puzzle()
+	for i in range(1, PUZZLE_COUNT):
+		get_tree().create_timer(i).timeout.connect(_slots[i].grid_manager.generate_puzzle)
 	queue_redraw()
 
 
