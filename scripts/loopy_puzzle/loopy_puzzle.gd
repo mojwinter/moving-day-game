@@ -32,9 +32,9 @@ const COL_WIN_GLOW := Color(1.0, 0.95, 0.7)
 const COL_RING_UNLIT := Color(0.3, 0.32, 0.4, 0.35)
 
 
-const BG_STAR_COUNT := 50
-const BG_STAR_DRIFT_Y := 1.0   # px/sec base downward drift
-const BG_STAR_DRIFT_X := 0.3   # px/sec base horizontal drift
+const BG_STAR_COUNT := 120
+const BG_STAR_DRIFT_X := 3.0   # px/sec base left-to-right drift
+const BG_STAR_DRIFT_Y := 0.3   # px/sec slight downward drift
 const COL_BG_STAR := Color(0.6, 0.65, 0.8, 0.4)
 
 var _grid_manager: Node = null
@@ -75,7 +75,7 @@ func _init_bg_stars() -> void:
 		_bg_stars.append({
 			"pos": Vector2(randf() * VIEWPORT_W, randf() * VIEWPORT_H),
 			"speed": randf_range(0.5, 1.5),
-			"drift_x": randf_range(-1.0, 1.0),
+			"drift_y": randf_range(-0.5, 1.0),
 			"phase": randf() * TAU,
 			"brightness": randf_range(0.2, 0.6),
 		})
@@ -83,8 +83,8 @@ func _init_bg_stars() -> void:
 
 func _update_bg_stars(delta: float) -> void:
 	for star in _bg_stars:
-		star.pos.y += BG_STAR_DRIFT_Y * star.speed * delta
-		star.pos.x += BG_STAR_DRIFT_X * star.drift_x * delta
+		star.pos.x += BG_STAR_DRIFT_X * star.speed * delta
+		star.pos.y += BG_STAR_DRIFT_Y * star.drift_y * delta
 		star.pos.x = fmod(star.pos.x + VIEWPORT_W, VIEWPORT_W)
 		star.pos.y = fmod(star.pos.y + VIEWPORT_H, VIEWPORT_H)
 
@@ -123,6 +123,7 @@ func _load_current_puzzle() -> void:
 	if _win_tween and _win_tween.is_valid():
 		_win_tween.kill()
 		_win_tween = null
+	_set_bloom_intensity(0.35)
 	_grid_manager.load_from_json(_manifest[_puzzle_index])
 	queue_redraw()
 
@@ -219,7 +220,49 @@ func _draw_puzzle() -> void:
 ## _ring_full_tex: the complete ring (for clue 0).
 ## _ring_seg_textures[n][i]: segment i of an n-segment ring (n = 1..MAX_CLUE).
 static var _ring_full_tex: ImageTexture
+static var _ring_full_glow: ImageTexture
 static var _ring_seg_textures: Dictionary = {}  # { int -> Array[ImageTexture] }
+static var _ring_seg_glow_textures: Dictionary = {}  # { int -> Array[ImageTexture] }
+static var _ring_seg_phases: Dictionary = {}  # { int -> Array[float] } phase offset per segment
+
+## Create a glow version of a ring image: 2px padding, 5x5 soft spread.
+static func _make_glow_image(src: Image) -> Image:
+	var sw := src.get_width()
+	var sh := src.get_height()
+	var pad := 2
+	var gw := sw + pad * 2
+	var gh := sh + pad * 2
+	var glow := Image.create(gw, gh, false, src.get_format())
+	# Accumulate glow in a float buffer then write once
+	var buf: Array[float] = []
+	buf.resize(gw * gh)
+	buf.fill(0.0)
+	# Spread kernel: center=1.0, adjacent=0.5, diagonal=0.25, 2-away=0.15
+	var offsets: Array[Vector2i] = [
+		Vector2i(0, 0), Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1),
+		Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1),
+		Vector2i(2, 0), Vector2i(-2, 0), Vector2i(0, 2), Vector2i(0, -2),
+	]
+	var weights: Array[float] = [
+		1.0, 0.5, 0.5, 0.5, 0.5,
+		0.25, 0.25, 0.25, 0.25,
+		0.15, 0.15, 0.15, 0.15,
+	]
+	for y in range(sh):
+		for x in range(sw):
+			if src.get_pixel(x, y).a > 0.0:
+				for k in range(offsets.size()):
+					var gx := x + pad + offsets[k].x
+					var gy := y + pad + offsets[k].y
+					if gx >= 0 and gx < gw and gy >= 0 and gy < gh:
+						buf[gy * gw + gx] = maxf(buf[gy * gw + gx], weights[k])
+	for y in range(gh):
+		for x in range(gw):
+			var v: float = buf[y * gw + x]
+			if v > 0.0:
+				glow.set_pixel(x, y, Color(1.0, 1.0, 1.0, v))
+	return glow
+
 
 static func _build_ring_textures() -> void:
 	var src_img := RING_SRC.get_image()
@@ -230,6 +273,7 @@ static func _build_ring_textures() -> void:
 	var cy := float(h) / 2.0
 
 	_ring_full_tex = ImageTexture.create_from_image(src_img)
+	_ring_full_glow = ImageTexture.create_from_image(_make_glow_image(src_img))
 
 	# Collect lit pixels sorted clockwise from top-center
 	var pixels: Array[Vector2i] = []
@@ -292,48 +336,82 @@ static func _build_ring_textures() -> void:
 				if seg < n:
 					seg_pixels[seg].append(sorted_pixels[px_i])
 
-		# Create a texture per segment
+		# Compute phase offset for each segment based on its midpoint around the ring
+		var phases: Array[float] = []
+		if gaps.is_empty():
+			phases.append(0.0)
+		else:
+			for i in range(n):
+				var start: int = gaps[i]
+				var end: int = gaps[(i + 1) % n]
+				if end <= start:
+					end += total
+				var mid := float(start + end) / 2.0
+				phases.append(mid / float(total) * TAU)
+
+		# Create a texture + glow texture per segment
 		var textures: Array[ImageTexture] = []
+		var glow_textures: Array[ImageTexture] = []
 		for i in range(n):
 			var seg_img := Image.create(w, h, false, src_img.get_format())
 			for px: Vector2i in seg_pixels[i]:
 				seg_img.set_pixel(px.x, px.y, src_img.get_pixel(px.x, px.y))
 			textures.append(ImageTexture.create_from_image(seg_img))
+			glow_textures.append(ImageTexture.create_from_image(_make_glow_image(seg_img)))
 		_ring_seg_textures[n] = textures
+		_ring_seg_glow_textures[n] = glow_textures
+		_ring_seg_phases[n] = phases
 
 
 func _draw_clue_ring(center: Vector2, clue: int, yes_count: int, satisfied: bool, fade_out: float) -> void:
 	@warning_ignore("integer_division")
 	var ring_offset := Vector2i(RING_SRC.get_width() / 2, RING_SRC.get_height() / 2)
 	var draw_pos := Vector2(center.x - ring_offset.x, center.y - ring_offset.y)
+	# Glow textures are 2px larger on each side
+	var glow_pos := Vector2(draw_pos.x - 2, draw_pos.y - 2)
 
 	if clue == 0:
 		var ring_col: Color
+		var glow_col: Color
 		if yes_count == 0:
 			var wave := sin(_time * 2.5) * 0.5 + 0.5
 			var bright := COL_CLUE_SAT.lerp(Color(0.7, 1.0, 0.7), wave)
 			ring_col = Color(bright, fade_out)
+			glow_col = Color(bright, 0.35 * fade_out)
 		else:
 			ring_col = Color(COL_EDGE_ERROR, COL_EDGE_ERROR.a * fade_out * 0.6)
+			glow_col = Color(COL_EDGE_ERROR, 0.25 * fade_out)
+		draw_texture(_ring_full_glow, glow_pos, glow_col)
 		draw_texture(_ring_full_tex, draw_pos, ring_col)
 		return
 
 	var n := clue
 	var seg_textures: Array = _ring_seg_textures[n]
+	var seg_glows: Array = _ring_seg_glow_textures[n]
+	var seg_phases: Array = _ring_seg_phases[n]
 
 	for i in range(n):
 		var seg_col: Color
+		var glow_col: Color
 		if yes_count > clue:
 			seg_col = Color(COL_EDGE_ERROR, COL_EDGE_ERROR.a * fade_out * 0.7)
+			glow_col = Color(COL_EDGE_ERROR, 0.25 * fade_out)
 		elif satisfied:
-			var wave := sin(_time * 2.5 - float(i) * 1.2) * 0.5 + 0.5
-			var bright := COL_CLUE_SAT.lerp(Color(0.7, 1.0, 0.7), wave)
-			seg_col = Color(bright, fade_out)
+			var wave := sin(_time * 4.0 - seg_phases[i]) * 0.5 + 0.5
+			var dim := Color(0.15, 0.25, 0.15)
+			var bright := Color(0.4, 0.75, 0.4)
+			var col := dim.lerp(bright, wave)
+			seg_col = Color(col, fade_out)
+			glow_col = Color(col, (0.2 + wave * 0.5) * fade_out)
 		elif i < yes_count:
 			seg_col = Color(COL_EDGE_YES, fade_out)
+			glow_col = Color(COL_EDGE_YES, 0.35 * fade_out)
 		else:
 			seg_col = Color(COL_RING_UNLIT, COL_RING_UNLIT.a * fade_out)
+			glow_col = Color(0.0, 0.0, 0.0, 0.0)
 
+		if glow_col.a > 0.0:
+			draw_texture(seg_glows[i], glow_pos, glow_col)
 		draw_texture(seg_textures[i], draw_pos, seg_col)
 
 
@@ -405,6 +483,12 @@ func _on_puzzle_solved() -> void:
 	_play_win_highlight()
 
 
+func _set_bloom_intensity(value: float) -> void:
+	var overlay := get_node_or_null("BloomOverlay")
+	if overlay and overlay.material:
+		overlay.material.set_shader_parameter("bloom_intensity", value)
+
+
 func _play_win_highlight() -> void:
 	if _win_tween and _win_tween.is_valid():
 		_win_tween.kill()
@@ -412,11 +496,15 @@ func _play_win_highlight() -> void:
 	# Phase 1: fade out non-loop elements
 	_win_tween.tween_method(func(v): _win_fade = v; queue_redraw(), 0.0, 1.0, 0.8) \
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	# Phase 2: glow the loop golden
+	# Phase 2: glow the loop golden + bloom surge
 	_win_tween.tween_method(func(v): _win_alpha = v; queue_redraw(), 0.0, 1.0, 0.5) \
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	# Phase 3: settle to sustained glow
+	_win_tween.parallel().tween_method(_set_bloom_intensity, 0.35, 1.2, 0.5) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	# Phase 3: settle to sustained glow + bloom
 	_win_tween.tween_method(func(v): _win_alpha = v; queue_redraw(), 1.0, 0.6, 0.4) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_win_tween.parallel().tween_method(_set_bloom_intensity, 1.2, 0.5, 0.4) \
 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	# Phase 4: hold, then advance
 	_win_tween.tween_interval(0.5)
