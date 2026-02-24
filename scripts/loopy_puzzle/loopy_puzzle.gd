@@ -21,7 +21,6 @@ const VIEWPORT_H := 180.0
 const MANIFEST_PATH := "res://data/loopy_puzzles/manifest.json"
 
 # Constellation theme colours
-const COL_BG := Color(0.05, 0.05, 0.15)
 const COL_DOT := Color(1.0, 0.95, 0.8)
 const COL_EDGE_UNKNOWN := Color(0.2, 0.2, 0.3, 0.3)
 const COL_EDGE_YES := Color(1.0, 0.9, 0.5)
@@ -42,12 +41,7 @@ var _win_alpha := 0.0
 var _win_fade := 0.0
 var _win_shimmer := 0.0
 
-# Background star positions (random tiny dots for ambiance)
-var _bg_stars: Array = []
-
-
 func _ready() -> void:
-	_generate_bg_stars()
 	_grid_manager = Node.new()
 	_grid_manager.set_script(GridManagerScript)
 	_grid_manager.name = "GridManager"
@@ -93,13 +87,6 @@ func _load_current_puzzle() -> void:
 # ===========================================================================
 
 func _draw() -> void:
-	# Background
-	draw_rect(Rect2(0, 0, VIEWPORT_W, VIEWPORT_H), COL_BG)
-
-	# Background stars
-	for s: Vector3 in _bg_stars:
-		draw_rect(Rect2(s.x, s.y, 1, 1), Color(1.0, 1.0, 1.0, s.z))
-
 	# Draw the puzzle
 	_draw_puzzle()
 
@@ -220,11 +207,6 @@ func _draw_progress() -> void:
 	draw_string(PIXEL_FONT, Vector2(tx, ty), txt, HORIZONTAL_ALIGNMENT_LEFT,
 				-1, font_size, Color(0.5, 0.5, 0.5, 0.6))
 
-
-func _generate_bg_stars() -> void:
-	_bg_stars.clear()
-	for _i in range(120):
-		_bg_stars.append(Vector3(randf() * VIEWPORT_W, randf() * VIEWPORT_H, randf_range(0.05, 0.25)))
 
 
 # ===========================================================================

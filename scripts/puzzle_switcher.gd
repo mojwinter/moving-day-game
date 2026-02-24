@@ -2,7 +2,6 @@ extends Node2D
 ## Debug scene switcher for testing puzzles.
 ## Press 1 for Net Puzzle, 2 for Tracks Puzzle.
 
-const PIXEL_FONT := preload("res://assets/fonts/m3x6.ttf")
 
 var _puzzle_scenes := {
 	KEY_1: "res://scenes/net_puzzle/net_puzzle.tscn",
@@ -34,8 +33,3 @@ func _load_puzzle(key: int) -> void:
 	_current_child = scene.instantiate()
 	add_child(_current_child)
 	queue_redraw()
-
-
-func _draw() -> void:
-	var hint: String = "[1] Circuit  [2] Tracks  [3] Stars"
-	draw_string(PIXEL_FONT, Vector2(2, 178), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.5, 0.5, 0.5, 0.6))
