@@ -3,6 +3,8 @@ extends Node2D
 ## Loads pre-generated puzzles from JSON, progressing linearly from easy to hard.
 
 const PIXEL_FONT := preload("res://assets/fonts/m3x6.ttf")
+const STAR_TEX := preload("res://assets/loopy/star2.png")
+const RING_SRC := preload("res://assets/loopy/ring11x12.png")
 const LC := preload("res://scripts/loopy_puzzle/loopy_consts.gd")
 const GridManagerScript := preload("res://scripts/loopy_puzzle/grid_manager.gd")
 
@@ -10,10 +12,8 @@ const EDGE_CLICK_DIST := 5.0
 const DOT_RADIUS := 1.5
 const LINE_WIDTH := 1.0
 const NO_MARK_SIZE := 4.0
-const RING_RADIUS := 5.0
-const RING_POINTS := 8
-const RING_GAP := 0.25
-const RING_WIDTH := 1.0
+const RING_GAP := 0.4
+const MAX_CLUE := 3
 
 const VIEWPORT_W := 320.0
 const VIEWPORT_H := 180.0
@@ -22,7 +22,7 @@ const MANIFEST_PATH := "res://data/loopy_puzzles/manifest.json"
 
 # Constellation theme colours
 const COL_DOT := Color(1.0, 0.95, 0.8)
-const COL_EDGE_UNKNOWN := Color(0.2, 0.2, 0.3, 0.3)
+const COL_EDGE_UNKNOWN := Color(0.35, 0.38, 0.5, 0.45)
 const COL_EDGE_YES := Color(1.0, 0.9, 0.5)
 const COL_EDGE_NO := Color(0.3, 0.25, 0.2, 0.5)
 const COL_EDGE_ERROR := Color(1.0, 0.2, 0.2)
@@ -32,6 +32,11 @@ const COL_WIN_GLOW := Color(1.0, 0.95, 0.7)
 const COL_RING_UNLIT := Color(0.3, 0.32, 0.4, 0.35)
 
 
+const BG_STAR_COUNT := 50
+const BG_STAR_DRIFT_Y := 1.0   # px/sec base downward drift
+const BG_STAR_DRIFT_X := 0.3   # px/sec base horizontal drift
+const COL_BG_STAR := Color(0.6, 0.65, 0.8, 0.4)
+
 var _grid_manager: Node = null
 var _manifest: Array = []
 var _puzzle_index: int = 0
@@ -40,8 +45,15 @@ var _win_tween: Tween = null
 var _win_alpha := 0.0
 var _win_fade := 0.0
 var _win_shimmer := 0.0
+var _time := 0.0
+
+# Background drifting stars
+var _bg_stars: Array[Dictionary] = []
 
 func _ready() -> void:
+	if _ring_seg_textures.is_empty():
+		_build_ring_textures()
+	_init_bg_stars()
 	_grid_manager = Node.new()
 	_grid_manager.set_script(GridManagerScript)
 	_grid_manager.name = "GridManager"
@@ -51,6 +63,39 @@ func _ready() -> void:
 	_load_manifest()
 	_load_current_puzzle()
 	queue_redraw()
+
+
+# ===========================================================================
+# Background star particles
+# ===========================================================================
+
+func _init_bg_stars() -> void:
+	_bg_stars.clear()
+	for i in range(BG_STAR_COUNT):
+		_bg_stars.append({
+			"pos": Vector2(randf() * VIEWPORT_W, randf() * VIEWPORT_H),
+			"speed": randf_range(0.5, 1.5),
+			"drift_x": randf_range(-1.0, 1.0),
+			"phase": randf() * TAU,
+			"brightness": randf_range(0.2, 0.6),
+		})
+
+
+func _update_bg_stars(delta: float) -> void:
+	for star in _bg_stars:
+		star.pos.y += BG_STAR_DRIFT_Y * star.speed * delta
+		star.pos.x += BG_STAR_DRIFT_X * star.drift_x * delta
+		star.pos.x = fmod(star.pos.x + VIEWPORT_W, VIEWPORT_W)
+		star.pos.y = fmod(star.pos.y + VIEWPORT_H, VIEWPORT_H)
+
+
+func _draw_bg_stars() -> void:
+	for star in _bg_stars:
+		var twinkle := sin(_time * 1.5 + star.phase) * 0.5 + 0.5
+		var alpha: float = star.brightness * (0.4 + twinkle * 0.6)
+		var col := Color(COL_BG_STAR, COL_BG_STAR.a * alpha)
+		var p := Vector2(floorf(star.pos.x), floorf(star.pos.y))
+		draw_rect(Rect2(p, Vector2(1, 1)), col)
 
 
 # ===========================================================================
@@ -87,6 +132,9 @@ func _load_current_puzzle() -> void:
 # ===========================================================================
 
 func _draw() -> void:
+	# Background particles (behind everything)
+	_draw_bg_stars()
+
 	# Draw the puzzle
 	_draw_puzzle()
 
@@ -115,7 +163,7 @@ func _draw_puzzle() -> void:
 			draw_line(d1, d2, base_col, LINE_WIDTH)
 		elif state == LC.LINE_NO:
 			if fade_out > 0.01:
-				var mid := Vector2(roundf((d1.x + d2.x) * 0.5), roundf((d1.y + d2.y) * 0.5))
+				var mid := Vector2(floorf((d1.x + d2.x) * 0.5), floorf((d1.y + d2.y) * 0.5))
 				var hs := NO_MARK_SIZE * 0.5
 				var c := Color(COL_EDGE_NO, COL_EDGE_NO.a * fade_out)
 				draw_line(mid + Vector2(-hs, -hs), mid + Vector2(hs, hs), c, 1.0)
@@ -125,14 +173,16 @@ func _draw_puzzle() -> void:
 				draw_line(d1, d2, Color(COL_EDGE_UNKNOWN, COL_EDGE_UNKNOWN.a * fade_out), LINE_WIDTH)
 
 	# Dots (stars) – shimmer during win
+	var star_offset := Vector2(STAR_TEX.get_width() * 0.5, STAR_TEX.get_height() * 0.5)
 	for di in range(grid.num_dots):
 		var p: Vector2 = grid.dots[di]
+		var draw_pos := Vector2(floorf(p.x - star_offset.x), floorf(p.y - star_offset.y))
 		if _solved and _win_shimmer > 0.0:
-			var twinkle := sin(_win_shimmer * 3.0 + grid.dots[di].x * 0.3 + grid.dots[di].y * 0.2) * 0.5 + 0.5
+			var twinkle := sin(_win_shimmer * 3.0 + p.x * 0.3 + p.y * 0.2) * 0.5 + 0.5
 			var col := COL_DOT.lerp(COL_WIN_GLOW, twinkle * _win_alpha)
-			draw_circle(p, DOT_RADIUS, col)
+			draw_texture(STAR_TEX, draw_pos, col)
 		else:
-			draw_circle(p, DOT_RADIUS, COL_DOT)
+			draw_texture(STAR_TEX, draw_pos)
 
 	# Face clues – fade out during win
 	if fade_out > 0.01:
@@ -142,6 +192,7 @@ func _draw_puzzle() -> void:
 			if c < 0:
 				continue
 			var center: Vector2 = grid.face_centroid(fi)
+			var snapped := Vector2(floorf(center.x), floorf(center.y))
 
 			var yes_count := 0
 			for ei: int in grid.face_edges[fi]:
@@ -150,50 +201,140 @@ func _draw_puzzle() -> void:
 			var satisfied := (yes_count == c)
 
 			# Progress ring (drawn first so text renders on top)
-			_draw_clue_ring(center, c, yes_count, satisfied, fade_out)
+			_draw_clue_ring(snapped, c, yes_count, satisfied, fade_out)
 
-			# Clue number text
+			# Clue number text — center visually within ring
 			var txt := str(c)
 			var ts := PIXEL_FONT.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
-			var base_col := COL_CLUE_SAT if satisfied else COL_CLUE
+			var base_col := COL_CLUE
 			var col := Color(base_col, base_col.a * fade_out)
 
-			var tx := roundf(center.x - ts.x * 0.5)
-			var ty := roundf(center.y + 3.0)
+			var tx := snapped.x - floorf(ts.x * 0.5) + 1.0
+			var ty := snapped.y + 3.0
 			draw_string(PIXEL_FONT, Vector2(tx, ty), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, col)
 
 
+## Ring segment textures built from ring.png at startup.
+## Walks ring pixels in clockwise order, splits into equal groups with 1px gaps.
+## _ring_full_tex: the complete ring (for clue 0).
+## _ring_seg_textures[n][i]: segment i of an n-segment ring (n = 1..MAX_CLUE).
+static var _ring_full_tex: ImageTexture
+static var _ring_seg_textures: Dictionary = {}  # { int -> Array[ImageTexture] }
+
+static func _build_ring_textures() -> void:
+	var src_img := RING_SRC.get_image()
+	src_img.decompress()
+	var w := src_img.get_width()
+	var h := src_img.get_height()
+	var cx := float(w) / 2.0
+	var cy := float(h) / 2.0
+
+	_ring_full_tex = ImageTexture.create_from_image(src_img)
+
+	# Collect lit pixels sorted clockwise from top-center
+	var pixels: Array[Vector2i] = []
+	var angles: Array[float] = []
+	for y in range(h):
+		for x in range(w):
+			if src_img.get_pixel(x, y).a > 0.0:
+				var a := atan2(float(y) - cy, float(x) - cx) + PI / 2.0
+				if a < 0.0:
+					a += TAU
+				pixels.append(Vector2i(x, y))
+				angles.append(a)
+
+	# Sort by angle
+	var indices: Array[int] = []
+	for idx in range(pixels.size()):
+		indices.append(idx)
+	indices.sort_custom(func(a_idx, b_idx): return angles[a_idx] < angles[b_idx])
+
+	var sorted_pixels: Array[Vector2i] = []
+	for idx in indices:
+		sorted_pixels.append(pixels[idx])
+
+	var total := sorted_pixels.size()
+
+	# Hand-picked gap indices per segment count (on 30px 11x12 ring):
+	# 1: no gaps → full 30px ring
+	# 2: gaps at top + bottom center → 14+14
+	# 3: gaps at mid-right + mid-bottom + mid-left → 7+7+13 (top seg is bigger)
+	var gap_map: Dictionary = {
+		1: [],
+		2: [29, 14],
+		3: [6, 14, 22],
+	}
+
+	for n in range(1, MAX_CLUE + 1):
+		var gaps: Array = gap_map[n]
+		var gap_set: Dictionary = {}
+		for g in gaps:
+			gap_set[g] = true
+
+		var seg_pixels: Array[Array] = []
+		for _i in range(n):
+			seg_pixels.append([])
+
+		if gaps.is_empty():
+			# No gaps — entire ring is one segment
+			for px_i in range(total):
+				seg_pixels[0].append(sorted_pixels[px_i])
+		else:
+			# Walk pixels, splitting at gaps. Start from the first gap.
+			var first_gap: int = gaps[0]
+			var seg := 0
+			for offset in range(total):
+				var px_i := (first_gap + offset) % total
+				if gap_set.has(px_i):
+					if offset > 0:
+						seg += 1
+					continue
+				if seg < n:
+					seg_pixels[seg].append(sorted_pixels[px_i])
+
+		# Create a texture per segment
+		var textures: Array[ImageTexture] = []
+		for i in range(n):
+			var seg_img := Image.create(w, h, false, src_img.get_format())
+			for px: Vector2i in seg_pixels[i]:
+				seg_img.set_pixel(px.x, px.y, src_img.get_pixel(px.x, px.y))
+			textures.append(ImageTexture.create_from_image(seg_img))
+		_ring_seg_textures[n] = textures
+
+
 func _draw_clue_ring(center: Vector2, clue: int, yes_count: int, satisfied: bool, fade_out: float) -> void:
+	@warning_ignore("integer_division")
+	var ring_offset := Vector2i(RING_SRC.get_width() / 2, RING_SRC.get_height() / 2)
+	var draw_pos := Vector2(center.x - ring_offset.x, center.y - ring_offset.y)
+
 	if clue == 0:
 		var ring_col: Color
 		if yes_count == 0:
-			ring_col = Color(COL_CLUE_SAT, COL_CLUE_SAT.a * fade_out)
+			var wave := sin(_time * 2.5) * 0.5 + 0.5
+			var bright := COL_CLUE_SAT.lerp(Color(0.7, 1.0, 0.7), wave)
+			ring_col = Color(bright, fade_out)
 		else:
 			ring_col = Color(COL_EDGE_ERROR, COL_EDGE_ERROR.a * fade_out * 0.6)
-		draw_arc(center, RING_RADIUS, 0.0, TAU, 24, ring_col, RING_WIDTH)
+		draw_texture(_ring_full_tex, draw_pos, ring_col)
 		return
 
 	var n := clue
-	var total_arc := TAU - n * RING_GAP
-	var seg_arc := total_arc / float(n)
-	var start := -PI / 2.0
-	var step := seg_arc + RING_GAP
+	var seg_textures: Array = _ring_seg_textures[n]
 
 	for i in range(n):
-		var seg_start := start + i * step
-		var seg_end := seg_start + seg_arc
-
 		var seg_col: Color
 		if yes_count > clue:
 			seg_col = Color(COL_EDGE_ERROR, COL_EDGE_ERROR.a * fade_out * 0.7)
 		elif satisfied:
-			seg_col = Color(COL_CLUE_SAT, COL_CLUE_SAT.a * fade_out)
+			var wave := sin(_time * 2.5 - float(i) * 1.2) * 0.5 + 0.5
+			var bright := COL_CLUE_SAT.lerp(Color(0.7, 1.0, 0.7), wave)
+			seg_col = Color(bright, fade_out)
 		elif i < yes_count:
 			seg_col = Color(COL_EDGE_YES, fade_out)
 		else:
 			seg_col = Color(COL_RING_UNLIT, COL_RING_UNLIT.a * fade_out)
 
-		draw_arc(center, RING_RADIUS, seg_start, seg_end, RING_POINTS, seg_col, RING_WIDTH)
+		draw_texture(seg_textures[i], draw_pos, seg_col)
 
 
 func _draw_progress() -> void:
@@ -291,6 +432,8 @@ func _advance_to_next_puzzle() -> void:
 
 
 func _process(delta: float) -> void:
+	_time += delta
+	_update_bg_stars(delta)
 	if _solved:
 		_win_shimmer += delta
-		queue_redraw()
+	queue_redraw()

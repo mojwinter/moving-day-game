@@ -1,7 +1,13 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/loopy_puzzle/loopy_puzzle.gd" id="1_puzzle"]
 [ext_resource type="Texture2D" path="res://assets/loopy/loopy_bg.png" id="2_bg"]
+[ext_resource type="Shader" path="res://assets/shaders/bloom.gdshader" id="3_bloom"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_bloom"]
+shader = ExtResource("3_bloom")
+shader_parameter/bloom_intensity = 0.35
+shader_parameter/brightness_threshold = 0.45
 
 [node name="LoopyPuzzle" type="Node2D"]
 script = ExtResource("1_puzzle")
@@ -10,3 +16,10 @@ script = ExtResource("1_puzzle")
 texture = ExtResource("2_bg")
 centered = false
 z_index = -1
+
+[node name="BloomOverlay" type="ColorRect" parent="."]
+z_index = 1
+material = SubResource("ShaderMaterial_bloom")
+offset_right = 320.0
+offset_bottom = 180.0
+mouse_filter = 2
