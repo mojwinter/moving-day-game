@@ -315,6 +315,20 @@ LoopyPuzzleData *loopy_generate(int w, int h, int grid_type, int diff) {
     data->clues = (signed char *)malloc(g->num_faces * sizeof(signed char));
     memcpy(data->clues, state->clues, g->num_faces * sizeof(signed char));
 
+    /* --- Solution: solve at max difficulty to get edge states --- */
+    {
+        solver_state *sstate = new_solver_state(state, DIFF_MAX);
+        solver_state *sstate_solved = solve_game_rec(sstate);
+        data->solution = (char *)malloc(g->num_edges * sizeof(char));
+        if (sstate_solved->solver_status == SOLVER_SOLVED) {
+            memcpy(data->solution, sstate_solved->state->lines, g->num_edges);
+        } else {
+            memset(data->solution, LINE_UNKNOWN, g->num_edges);
+        }
+        free_solver_state(sstate_solved);
+        free_solver_state(sstate);
+    }
+
     /* 6. Cleanup Tatham objects */
     free_game(state);
     sfree(desc);
@@ -345,5 +359,6 @@ void loopy_free_data(LoopyPuzzleData *data) {
     free(data->face_ix);
     free(data->face_iy);
     free(data->clues);
+    free(data->solution);
     free(data);
 }

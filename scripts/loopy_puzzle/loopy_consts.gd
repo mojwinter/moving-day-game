@@ -12,3 +12,6 @@ const SOLVER_AMBIGUOUS := 2
 const SOLVER_INCOMPLETE := 3
 
 const DIFF_EASY := 0
+const DIFF_NORMAL := 1
+const DIFF_TRICKY := 2
+const DIFF_HARD := 3

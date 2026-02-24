@@ -1,6 +1,6 @@
 extends Node
 ## Manages the logical state for the Night 4 Constellation (Loopy) puzzle.
-## Uses native GDExtension (LoopyNative) for fast puzzle generation.
+## Supports both native GDExtension generation and loading from JSON files.
 ## Handles player moves and completion checking in GDScript.
 
 const GridData := preload("res://scripts/loopy_puzzle/grid_data.gd")
@@ -9,13 +9,11 @@ const LC := preload("res://scripts/loopy_puzzle/loopy_consts.gd")
 signal puzzle_solved
 signal grid_changed
 
-const GRID_W := 7
-const GRID_H := 5
-
 var grid: GridData = null
 var clues: Array = [] # per face: -1 (no clue) or 0..N
 var lines: Array = [] # per edge: LINE_YES / LINE_UNKNOWN / LINE_NO
 var line_errors: Array = [] # per edge: true if violation
+var solution: Array = [] # per edge: LINE_YES or LINE_NO (from generation/JSON)
 var solved := false
 
 
@@ -27,14 +25,19 @@ func _ready() -> void:
 # Public API
 # ===========================================================================
 
-func generate_puzzle() -> void:
+func generate_puzzle(w: int = 7, h: int = 5, diff: int = LC.DIFF_EASY) -> Dictionary:
+	## Generate a puzzle using the native C extension. Returns the raw Dictionary
+	## for serialization by the dev generator.
+	var native := LoopyNative.new()
+	var data: Dictionary = native.generate_puzzle(w, h, diff)
+	load_from_dict(data)
+	return data
+
+
+func load_from_dict(data: Dictionary) -> void:
+	## Unpack a puzzle Dictionary (from native or JSON) into GridData + player state.
 	solved = false
 
-	# Use native C extension for fast generation
-	var native := LoopyNative.new()
-	var data: Dictionary = native.generate_puzzle(GRID_W, GRID_H)
-
-	# Unpack into GridData
 	grid = GridData.new()
 	grid.num_dots = data["num_dots"]
 	grid.num_edges = data["num_edges"]
@@ -124,6 +127,15 @@ func generate_puzzle() -> void:
 	for i in range(grid.num_faces):
 		clues[i] = c_arr[i]
 
+	# Solution (if available)
+	if data.has("solution"):
+		var sol_arr: PackedInt32Array = data["solution"]
+		solution.resize(grid.num_edges)
+		for i in range(grid.num_edges):
+			solution[i] = sol_arr[i]
+	else:
+		solution.clear()
+
 	# Initialise player state
 	lines.resize(grid.num_edges)
 	lines.fill(LC.LINE_UNKNOWN)
@@ -131,6 +143,25 @@ func generate_puzzle() -> void:
 	line_errors.fill(false)
 
 	grid_changed.emit()
+
+
+func load_from_json(path: String) -> bool:
+	## Load a puzzle from a JSON file. Returns true on success.
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		push_error("Failed to open puzzle: %s" % path)
+		return false
+	var json_text := file.get_as_text()
+	file.close()
+	var json := JSON.new()
+	var err := json.parse(json_text)
+	if err != OK:
+		push_error("JSON parse error in %s: %s" % [path, json.get_error_message()])
+		return false
+	var data: Dictionary = json.data
+	_convert_json_arrays(data)
+	load_from_dict(data)
+	return true
 
 
 func toggle_edge(edge_idx: int, use_yes: bool) -> void:
@@ -153,6 +184,36 @@ func toggle_edge(edge_idx: int, use_yes: bool) -> void:
 	grid_changed.emit()
 	if solved:
 		puzzle_solved.emit()
+
+
+# ===========================================================================
+# JSON array conversion
+# ===========================================================================
+
+func _convert_json_arrays(data: Dictionary) -> void:
+	## Convert generic Arrays from JSON.parse to PackedFloat32Array / PackedInt32Array
+	## to match the types expected by load_from_dict().
+	for key in ["dots_x", "dots_y", "face_ix", "face_iy"]:
+		if data.has(key) and data[key] is Array:
+			var pf := PackedFloat32Array()
+			var src: Array = data[key]
+			pf.resize(src.size())
+			for i in range(src.size()):
+				pf[i] = float(src[i])
+			data[key] = pf
+	for key in ["dot_order", "dot_edges_flat", "dot_edges_offsets",
+				"dot_faces_flat", "dot_faces_offsets",
+				"edge_d1", "edge_d2", "edge_f1", "edge_f2",
+				"face_order", "face_dots_flat", "face_dots_offsets",
+				"face_edges_flat", "face_edges_offsets",
+				"clues", "solution"]:
+		if data.has(key) and data[key] is Array:
+			var pi := PackedInt32Array()
+			var src: Array = data[key]
+			pi.resize(src.size())
+			for i in range(src.size()):
+				pi[i] = int(src[i])
+			data[key] = pi
 
 
 # ===========================================================================

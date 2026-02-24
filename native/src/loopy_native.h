@@ -19,7 +19,7 @@ public:
     // Generate a complete Loopy puzzle on a Penrose P2 grid.
     // Returns a Dictionary with all grid topology + clue data,
     // with dot positions already scaled to the 320x180 viewport.
-    Dictionary generate_puzzle(int w, int h);
+    Dictionary generate_puzzle(int w, int h, int diff);
 };
 
 } // namespace godot

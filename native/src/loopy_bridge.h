@@ -46,6 +46,9 @@ typedef struct {
 
     /* Clues: per-face, -1 means no clue shown */
     signed char *clues;
+
+    /* Solution: per-edge line state (LINE_YES=0 or LINE_NO=2) */
+    char *solution;
 } LoopyPuzzleData;
 
 /*

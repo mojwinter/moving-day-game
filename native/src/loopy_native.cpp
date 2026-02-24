@@ -25,11 +25,11 @@ LoopyNative::LoopyNative() {}
 LoopyNative::~LoopyNative() {}
 
 void LoopyNative::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("generate_puzzle", "w", "h"), &LoopyNative::generate_puzzle);
+    ClassDB::bind_method(D_METHOD("generate_puzzle", "w", "h", "diff"), &LoopyNative::generate_puzzle);
 }
 
-Dictionary LoopyNative::generate_puzzle(int w, int h) {
-    LoopyPuzzleData *data = loopy_generate(w, h, GRID_TYPE_PENROSE_P2, DIFF_EASY);
+Dictionary LoopyNative::generate_puzzle(int w, int h, int diff) {
+    LoopyPuzzleData *data = loopy_generate(w, h, GRID_TYPE_PENROSE_P2, diff);
 
     Dictionary result;
     result["num_dots"] = data->num_dots;
@@ -156,6 +156,13 @@ Dictionary LoopyNative::generate_puzzle(int w, int h) {
     for (int i = 0; i < data->num_faces; i++)
         clues[i] = (int)data->clues[i];
     result["clues"] = clues;
+
+    /* Solution: per-edge line state (LINE_YES=0 or LINE_NO=2) */
+    PackedInt32Array solution;
+    solution.resize(data->num_edges);
+    for (int i = 0; i < data->num_edges; i++)
+        solution[i] = (int)data->solution[i];
+    result["solution"] = solution;
 
     loopy_free_data(data);
     return result;

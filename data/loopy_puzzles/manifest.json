@@ -1,0 +1,13 @@
+{
+  "puzzles": [
+    "res://data/loopy_puzzles/puzzle_000.json",
+    "res://data/loopy_puzzles/puzzle_001.json",
+    "res://data/loopy_puzzles/puzzle_002.json",
+    "res://data/loopy_puzzles/puzzle_003.json",
+    "res://data/loopy_puzzles/puzzle_004.json",
+    "res://data/loopy_puzzles/puzzle_005.json",
+    "res://data/loopy_puzzles/puzzle_006.json",
+    "res://data/loopy_puzzles/puzzle_007.json",
+    "res://data/loopy_puzzles/puzzle_008.json"
+  ]
+}
