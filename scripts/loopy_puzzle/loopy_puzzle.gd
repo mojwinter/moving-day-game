@@ -5,6 +5,7 @@ extends Node2D
 const PIXEL_FONT := preload("res://assets/fonts/m3x6.ttf")
 const STAR_TEX := preload("res://assets/loopy/star2.png")
 const RING_SRC := preload("res://assets/loopy/ring11x12.png")
+const EDGE_TEX := preload("res://assets/loopy/edge_line.png")
 const LC := preload("res://scripts/loopy_puzzle/loopy_consts.gd")
 const GridManagerScript := preload("res://scripts/loopy_puzzle/grid_manager.gd")
 
@@ -169,12 +170,12 @@ func _draw_puzzle() -> void:
 		var err: bool = gm.line_errors[ei]
 
 		if err and fade_out > 0.01:
-			draw_line(d1, d2, Color(COL_EDGE_ERROR, fade_out), LINE_WIDTH)
+			_draw_edge_glow(d1, d2, COL_EDGE_ERROR, fade_out)
 		elif state == LC.LINE_YES:
 			var base_col := COL_EDGE_YES.lerp(COL_WIN_GLOW, _win_alpha)
 			var yes_alpha := _loop_fade if _solved else fade_out
 			if yes_alpha > 0.01:
-				draw_line(d1, d2, Color(base_col, yes_alpha), LINE_WIDTH)
+				_draw_edge_glow(d1, d2, base_col, yes_alpha)
 		elif fade_out > 0.01:
 			if state == LC.LINE_NO:
 				var mid := Vector2(floorf((d1.x + d2.x) * 0.5), floorf((d1.y + d2.y) * 0.5))
@@ -183,7 +184,7 @@ func _draw_puzzle() -> void:
 				draw_line(mid + Vector2(-hs, -hs), mid + Vector2(hs, hs), c, 1.0)
 				draw_line(mid + Vector2(hs, -hs), mid + Vector2(-hs, hs), c, 1.0)
 			else:
-				draw_line(d1, d2, Color(COL_EDGE_UNKNOWN, COL_EDGE_UNKNOWN.a * fade_out), LINE_WIDTH)
+				_draw_edge_glow(d1, d2, COL_EDGE_UNKNOWN, COL_EDGE_UNKNOWN.a * fade_out)
 
 	# Dots (stars) – shimmer during win
 	var star_offset := Vector2(STAR_TEX.get_width() * 0.5, STAR_TEX.get_height() * 0.5)
@@ -393,6 +394,15 @@ static func _build_ring_textures() -> void:
 		_ring_seg_textures[n] = textures
 		_ring_seg_glow_textures[n] = glow_textures
 		_ring_seg_phases[n] = phases
+
+
+func _draw_edge_glow(d1: Vector2, d2: Vector2, col: Color, alpha: float) -> void:
+	# Outer glow (wider, softer, antialiased for soft edges)
+	draw_line(d1, d2, Color(col, alpha * 0.2), 5.0, true)
+	# Inner glow
+	draw_line(d1, d2, Color(col, alpha * 0.4), 3.0, true)
+	# Core line
+	draw_line(d1, d2, Color(col, alpha), LINE_WIDTH)
 
 
 func _draw_clue_ring(center: Vector2, clue: int, yes_count: int, satisfied: bool, fade_out: float) -> void:
