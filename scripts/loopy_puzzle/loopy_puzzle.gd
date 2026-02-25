@@ -403,18 +403,12 @@ func _draw_clue_ring(center: Vector2, clue: int, yes_count: int, satisfied: bool
 	var glow_pos := Vector2(draw_pos.x - 2, draw_pos.y - 2)
 
 	if clue == 0:
-		var ring_col: Color
-		var glow_col: Color
-		if yes_count == 0:
-			var wave := sin(_time * 2.5) * 0.5 + 0.5
-			var bright := COL_CLUE_SAT.lerp(Color(0.7, 1.0, 0.7), wave)
-			ring_col = Color(bright, fade_out)
-			glow_col = Color(bright, 0.35 * fade_out)
-		else:
-			ring_col = Color(COL_EDGE_ERROR, COL_EDGE_ERROR.a * fade_out * 0.6)
-			glow_col = Color(COL_EDGE_ERROR, 0.25 * fade_out)
-		draw_texture(_ring_full_glow, glow_pos, glow_col)
-		draw_texture(_ring_full_tex, draw_pos, ring_col)
+		if yes_count > 0:
+			# Error: lines touching a 0-clue face
+			var ring_col := Color(COL_EDGE_ERROR, COL_EDGE_ERROR.a * fade_out * 0.6)
+			var glow_col := Color(COL_EDGE_ERROR, 0.25 * fade_out)
+			draw_texture(_ring_full_glow, glow_pos, glow_col)
+			draw_texture(_ring_full_tex, draw_pos, ring_col)
 		return
 
 	var n := clue
