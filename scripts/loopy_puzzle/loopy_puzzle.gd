@@ -45,10 +45,17 @@ var _win_tween: Tween = null
 var _win_alpha := 0.0
 var _win_fade := 0.0
 var _win_shimmer := 0.0
+var _loop_fade := 1.0  # 1=visible, 0=hidden — fades the solved loop outline
 var _time := 0.0
 
 # Background drifting stars
 var _bg_stars: Array[Dictionary] = []
+
+# Dot transition between puzzles
+var _transitioning := false
+var _transition_t := 0.0
+var _transition_dots: Array = []  # Array of {from: Vector2, to: Vector2, fade: String}
+var _fade_in := 1.0  # 0→1 fade for edges/clues after dots settle
 
 func _ready() -> void:
 	if _ring_seg_textures.is_empty():
@@ -120,6 +127,7 @@ func _load_current_puzzle() -> void:
 	_win_alpha = 0.0
 	_win_fade = 0.0
 	_win_shimmer = 0.0
+	_loop_fade = 1.0
 	if _win_tween and _win_tween.is_valid():
 		_win_tween.kill()
 		_win_tween = null
@@ -136,8 +144,11 @@ func _draw() -> void:
 	# Background particles (behind everything)
 	_draw_bg_stars()
 
-	# Draw the puzzle
-	_draw_puzzle()
+	if _transitioning:
+		_draw_transition()
+	else:
+		# Draw the puzzle
+		_draw_puzzle()
 
 	# Progress indicator
 	_draw_progress()
@@ -148,7 +159,7 @@ func _draw_puzzle() -> void:
 	if gm.grid == null:
 		return
 	var grid = gm.grid
-	var fade_out := 1.0 - _win_fade
+	var fade_out := (1.0 - _win_fade) * _fade_in
 
 	# Edges
 	for ei in range(grid.num_edges):
@@ -157,20 +168,21 @@ func _draw_puzzle() -> void:
 		var state: int = gm.lines[ei]
 		var err: bool = gm.line_errors[ei]
 
-		if err:
-			draw_line(d1, d2, COL_EDGE_ERROR, LINE_WIDTH)
+		if err and fade_out > 0.01:
+			draw_line(d1, d2, Color(COL_EDGE_ERROR, fade_out), LINE_WIDTH)
 		elif state == LC.LINE_YES:
 			var base_col := COL_EDGE_YES.lerp(COL_WIN_GLOW, _win_alpha)
-			draw_line(d1, d2, base_col, LINE_WIDTH)
-		elif state == LC.LINE_NO:
-			if fade_out > 0.01:
+			var yes_alpha := _loop_fade if _solved else fade_out
+			if yes_alpha > 0.01:
+				draw_line(d1, d2, Color(base_col, yes_alpha), LINE_WIDTH)
+		elif fade_out > 0.01:
+			if state == LC.LINE_NO:
 				var mid := Vector2(floorf((d1.x + d2.x) * 0.5), floorf((d1.y + d2.y) * 0.5))
 				var hs := NO_MARK_SIZE * 0.5
 				var c := Color(COL_EDGE_NO, COL_EDGE_NO.a * fade_out)
 				draw_line(mid + Vector2(-hs, -hs), mid + Vector2(hs, hs), c, 1.0)
 				draw_line(mid + Vector2(hs, -hs), mid + Vector2(-hs, hs), c, 1.0)
-		else:
-			if fade_out > 0.01:
+			else:
 				draw_line(d1, d2, Color(COL_EDGE_UNKNOWN, COL_EDGE_UNKNOWN.a * fade_out), LINE_WIDTH)
 
 	# Dots (stars) – shimmer during win
@@ -213,6 +225,26 @@ func _draw_puzzle() -> void:
 			var tx := snapped.x - floorf(ts.x * 0.5) + 1.0
 			var ty := snapped.y + 3.0
 			draw_string(PIXEL_FONT, Vector2(tx, ty), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, col)
+
+
+func _draw_transition() -> void:
+	var star_offset := Vector2(STAR_TEX.get_width() * 0.5, STAR_TEX.get_height() * 0.5)
+	var t := _transition_t
+	for dot in _transition_dots:
+		var p: Vector2
+		var alpha: float
+		match dot.fade:
+			"morph":
+				p = dot.from.lerp(dot.to, t)
+				alpha = 1.0
+			"out":
+				p = dot.from
+				alpha = 1.0 - t
+			"in":
+				p = dot.to
+				alpha = t
+		var draw_pos := Vector2(floorf(p.x - star_offset.x), floorf(p.y - star_offset.y))
+		draw_texture(STAR_TEX, draw_pos, Color(COL_DOT, alpha))
 
 
 ## Ring segment textures built from ring.png at startup.
@@ -433,7 +465,7 @@ func _draw_progress() -> void:
 # ===========================================================================
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _solved:
+	if _solved or _transitioning or _fade_in < 1.0:
 		return
 	if _grid_manager.grid == null:
 		return
@@ -492,31 +524,124 @@ func _set_bloom_intensity(value: float) -> void:
 func _play_win_highlight() -> void:
 	if _win_tween and _win_tween.is_valid():
 		_win_tween.kill()
+	_loop_fade = 1.0
 	_win_tween = create_tween()
-	# Phase 1: fade out non-loop elements
-	_win_tween.tween_method(func(v): _win_fade = v; queue_redraw(), 0.0, 1.0, 0.8) \
+	# Phase 1 (1s): fade out non-loop elements
+	_win_tween.tween_method(func(v): _win_fade = v; queue_redraw(), 0.0, 1.0, 1.0) \
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	# Phase 2: glow the loop golden + bloom surge
+	# Phase 2 (0.5s): glow the loop golden + bloom surge
 	_win_tween.tween_method(func(v): _win_alpha = v; queue_redraw(), 0.0, 1.0, 0.5) \
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	_win_tween.parallel().tween_method(_set_bloom_intensity, 0.35, 1.2, 0.5) \
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	# Phase 3: settle to sustained glow + bloom
-	_win_tween.tween_method(func(v): _win_alpha = v; queue_redraw(), 1.0, 0.6, 0.4) \
+	# Phase 3 (0.5s): settle to sustained glow + bloom
+	_win_tween.tween_method(func(v): _win_alpha = v; queue_redraw(), 1.0, 0.6, 0.5) \
 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	_win_tween.parallel().tween_method(_set_bloom_intensity, 1.2, 0.5, 0.4) \
+	_win_tween.parallel().tween_method(_set_bloom_intensity, 1.2, 0.5, 0.5) \
 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	# Phase 4: hold, then advance
+	# Phase 4 (0.5s): hold the completed loop outline
 	_win_tween.tween_interval(0.5)
+	# Phase 5 (1s): fade out the loop edges
+	_win_tween.tween_method(func(v): _loop_fade = v; queue_redraw(), 1.0, 0.0, 1.0) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	_win_tween.parallel().tween_method(_set_bloom_intensity, 0.5, 0.0, 1.0) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	# Phase 6: advance to next puzzle (dot transition 1.5s, then fade-in 1s)
 	_win_tween.tween_callback(_advance_to_next_puzzle)
 
 
 func _advance_to_next_puzzle() -> void:
 	_puzzle_index += 1
 	if _puzzle_index >= _manifest.size():
-		# All puzzles complete
 		return
+	# Snapshot old dot positions
+	var old_dots: Array[Vector2] = []
+	if _grid_manager.grid != null:
+		for di in range(_grid_manager.grid.num_dots):
+			old_dots.append(_grid_manager.grid.dots[di])
+	# Pre-read next puzzle JSON to get new dot positions
+	var new_dots := _read_dots_from_json(_manifest[_puzzle_index])
+	# Build transition array
+	_transition_dots = _match_dots(old_dots, new_dots)
+	_transitioning = true
+	_transition_t = 0.0
+	# Tween the transition
+	if _win_tween and _win_tween.is_valid():
+		_win_tween.kill()
+	_win_tween = create_tween()
+	_win_tween.tween_method(func(v): _transition_t = v; queue_redraw(), 0.0, 1.0, 1.5) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_win_tween.tween_callback(_finish_transition)
+
+
+func _read_dots_from_json(path: String) -> Array[Vector2]:
+	var dots: Array[Vector2] = []
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return dots
+	var json := JSON.new()
+	json.parse(file.get_as_text())
+	file.close()
+	var data: Dictionary = json.data
+	var dx = data["dots_x"]
+	var dy = data["dots_y"]
+	for i in range(dx.size()):
+		dots.append(Vector2(dx[i], dy[i]))
+	return dots
+
+
+func _match_dots(old_dots: Array[Vector2], new_dots: Array[Vector2]) -> Array:
+	var result: Array = []
+	var old_used: Array[bool] = []
+	old_used.resize(old_dots.size())
+	old_used.fill(false)
+	var new_used: Array[bool] = []
+	new_used.resize(new_dots.size())
+	new_used.fill(false)
+	var match_count := mini(old_dots.size(), new_dots.size())
+	# Greedy nearest-neighbour matching
+	for _m in range(match_count):
+		var best_dist := 9999.0
+		var best_old := -1
+		var best_new := -1
+		for oi in range(old_dots.size()):
+			if old_used[oi]:
+				continue
+			for ni in range(new_dots.size()):
+				if new_used[ni]:
+					continue
+				var d := old_dots[oi].distance_to(new_dots[ni])
+				if d < best_dist:
+					best_dist = d
+					best_old = oi
+					best_new = ni
+		if best_old < 0 or best_dist > 120.0:
+			break
+		old_used[best_old] = true
+		new_used[best_new] = true
+		result.append({"from": old_dots[best_old], "to": new_dots[best_new], "fade": "morph"})
+	# Remaining old dots fade out
+	for oi in range(old_dots.size()):
+		if not old_used[oi]:
+			result.append({"from": old_dots[oi], "to": old_dots[oi], "fade": "out"})
+	# Remaining new dots fade in
+	for ni in range(new_dots.size()):
+		if not new_used[ni]:
+			result.append({"from": new_dots[ni], "to": new_dots[ni], "fade": "in"})
+	return result
+
+
+func _finish_transition() -> void:
+	_transitioning = false
+	_transition_dots.clear()
 	_load_current_puzzle()
+	# Fade in edges and clues
+	_fade_in = 0.0
+	if _win_tween and _win_tween.is_valid():
+		_win_tween.kill()
+	_win_tween = create_tween()
+	_win_tween.tween_method(func(v): _fade_in = v; queue_redraw(), 0.0, 1.0, 1.0) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 
 func _process(delta: float) -> void:
