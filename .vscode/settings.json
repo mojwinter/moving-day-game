@@ -1,3 +1,4 @@
 {
-    "godotTools.editorPath.godot4": "c:\\Users\\topsh\\Downloads\\Godot_v4.5.1-stable_win64.exe\\Godot_v4.5.1-stable_win64.exe"
+    "godotTools.editorPath.godot4": "c:\\Users\\topsh\\Downloads\\Godot_v4.5.1-stable_win64.exe\\Godot_v4.5.1-stable_win64.exe",
+    "cmake.sourceDirectory": "C:/Users/topsh/Documents/GitHub/moving-day-game/godot-cpp"
 }

@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/shadow_puzzle/shadow_puzzle.gd" id="1_puzzle"]
+[ext_resource type="Script" path="res://scripts/shadow_puzzle/grid_manager.gd" id="2_grid"]
+
+[node name="ShadowPuzzle" type="Node2D"]
+script = ExtResource("1_puzzle")
+
+[node name="GridManager" type="Node" parent="."]
+script = ExtResource("2_grid")

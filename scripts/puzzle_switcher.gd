@@ -7,6 +7,7 @@ var _puzzle_scenes := {
 	KEY_1: "res://scenes/net_puzzle/net_puzzle.tscn",
 	KEY_2: "res://scenes/tracks_puzzle/tracks_puzzle.tscn",
 	KEY_3: "res://scenes/loopy_puzzle/loopy_puzzle.tscn",
+	KEY_4: "res://scenes/shadow_puzzle/shadow_puzzle.tscn",
 }
 
 var _current_key: int = KEY_2
