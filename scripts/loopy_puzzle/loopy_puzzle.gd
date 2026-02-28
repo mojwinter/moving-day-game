@@ -10,6 +10,8 @@ const LC := preload("res://scripts/loopy_puzzle/loopy_consts.gd")
 const GridManagerScript := preload("res://scripts/loopy_puzzle/grid_manager.gd")
 
 const EDGE_CLICK_DIST := 5.0
+const DOT_CLICK_DIST := 8.0 # distance to snap to a dot when clicking
+const DOT_SNAP_DIST := 6.0 # distance to auto-extend trail while drawing
 const DOT_RADIUS := 1.5
 const LINE_WIDTH := 1.0
 const NO_MARK_SIZE := 4.0
@@ -34,8 +36,8 @@ const COL_RING_UNLIT := Color(0.3, 0.32, 0.4, 0.35)
 
 
 const BG_STAR_COUNT := 120
-const BG_STAR_DRIFT_X := 3.0   # px/sec base left-to-right drift
-const BG_STAR_DRIFT_Y := 0.3   # px/sec slight downward drift
+const BG_STAR_DRIFT_X := 3.0 # px/sec base left-to-right drift
+const BG_STAR_DRIFT_Y := 0.3 # px/sec slight downward drift
 const COL_BG_STAR := Color(0.6, 0.65, 0.8, 0.4)
 
 var _grid_manager: Node = null
@@ -46,8 +48,14 @@ var _win_tween: Tween = null
 var _win_alpha := 0.0
 var _win_fade := 0.0
 var _win_shimmer := 0.0
-var _loop_fade := 1.0  # 1=visible, 0=hidden — fades the solved loop outline
+var _loop_fade := 1.0 # 1=visible, 0=hidden — fades the solved loop outline
 var _time := 0.0
+
+# Trail drawing state
+var _drawing := false # true while actively drawing a trail
+var _current_dot := -1 # index of the dot the trail cursor is currently at
+var _trail_edges: Array = [] # ordered list of edge indices in the current trail stroke
+var _mouse_pos := Vector2.ZERO
 
 # Background drifting stars
 var _bg_stars: Array[Dictionary] = []
@@ -55,8 +63,8 @@ var _bg_stars: Array[Dictionary] = []
 # Dot transition between puzzles
 var _transitioning := false
 var _transition_t := 0.0
-var _transition_dots: Array = []  # Array of {from: Vector2, to: Vector2, fade: String}
-var _fade_in := 1.0  # 0→1 fade for edges/clues after dots settle
+var _transition_dots: Array = [] # Array of {from: Vector2, to: Vector2, fade: String}
+var _fade_in := 1.0 # 0→1 fade for edges/clues after dots settle
 
 func _ready() -> void:
 	if _ring_seg_textures.is_empty():
@@ -162,7 +170,18 @@ func _draw_puzzle() -> void:
 	var grid = gm.grid
 	var fade_out := (1.0 - _win_fade) * _fade_in
 
-	# Edges
+	# Guide layer: draw solution edges faintly so player knows the path
+	if not _solved and fade_out > 0.01 and gm.solution.size() == grid.num_edges:
+		for ei in range(grid.num_edges):
+			if gm.solution[ei] == LC.LINE_YES:
+				var d1: Vector2 = grid.dots[grid.edges[ei].x]
+				var d2: Vector2 = grid.dots[grid.edges[ei].y]
+				# Subtle pulsing guide
+				var pulse := sin(_time * 2.0 + ei * 0.5) * 0.03 + 0.12
+				var guide_col := Color(COL_EDGE_YES.r, COL_EDGE_YES.g, COL_EDGE_YES.b, pulse * fade_out)
+				draw_line(d1, d2, guide_col, 1.0)
+
+	# All edges (unknown shown dim, YES shown bright)
 	for ei in range(grid.num_edges):
 		var d1: Vector2 = grid.dots[grid.edges[ei].x]
 		var d2: Vector2 = grid.dots[grid.edges[ei].y]
@@ -177,14 +196,16 @@ func _draw_puzzle() -> void:
 			if yes_alpha > 0.01:
 				_draw_edge_glow(d1, d2, base_col, yes_alpha)
 		elif fade_out > 0.01:
-			if state == LC.LINE_NO:
-				var mid := Vector2(floorf((d1.x + d2.x) * 0.5), floorf((d1.y + d2.y) * 0.5))
-				var hs := NO_MARK_SIZE * 0.5
-				var c := Color(COL_EDGE_NO, COL_EDGE_NO.a * fade_out)
-				draw_line(mid + Vector2(-hs, -hs), mid + Vector2(hs, hs), c, 1.0)
-				draw_line(mid + Vector2(hs, -hs), mid + Vector2(-hs, hs), c, 1.0)
-			else:
-				_draw_edge_glow(d1, d2, COL_EDGE_UNKNOWN, COL_EDGE_UNKNOWN.a * fade_out)
+			# Draw unknown / unfilled edges so the full grid is visible
+			_draw_edge_glow(d1, d2, COL_EDGE_UNKNOWN, COL_EDGE_UNKNOWN.a * fade_out)
+
+	# Drawing-mode: show a line from current dot to mouse cursor
+	if _drawing and _current_dot >= 0 and not _solved:
+		var dot_pos: Vector2 = grid.dots[_current_dot]
+		var trail_col := Color(COL_EDGE_YES.r, COL_EDGE_YES.g, COL_EDGE_YES.b, 0.4)
+		draw_line(dot_pos, _mouse_pos, trail_col, 1.0)
+		# Draw a small circle at current dot to show anchor
+		draw_circle(dot_pos, 2.5, Color(COL_EDGE_YES, 0.6))
 
 	# Dots (stars) – shimmer during win
 	var star_offset := Vector2(STAR_TEX.get_width() * 0.5, STAR_TEX.get_height() * 0.5)
@@ -254,9 +275,9 @@ func _draw_transition() -> void:
 ## _ring_seg_textures[n][i]: segment i of an n-segment ring (n = 1..MAX_CLUE).
 static var _ring_full_tex: ImageTexture
 static var _ring_full_glow: ImageTexture
-static var _ring_seg_textures: Dictionary = {}  # { int -> Array[ImageTexture] }
-static var _ring_seg_glow_textures: Dictionary = {}  # { int -> Array[ImageTexture] }
-static var _ring_seg_phases: Dictionary = {}  # { int -> Array[float] } phase offset per segment
+static var _ring_seg_textures: Dictionary = {} # { int -> Array[ImageTexture] }
+static var _ring_seg_glow_textures: Dictionary = {} # { int -> Array[ImageTexture] }
+static var _ring_seg_phases: Dictionary = {} # { int -> Array[float] } phase offset per segment
 
 ## Create a glow version of a ring image: 2px padding, 5x5 soft spread.
 static func _make_glow_image(src: Image) -> Image:
@@ -463,9 +484,8 @@ func _draw_progress() -> void:
 				-1, font_size, Color(0.5, 0.5, 0.5, 0.6))
 
 
-
 # ===========================================================================
-# Input handling
+# Input handling — click-and-move trail drawing
 # ===========================================================================
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -473,13 +493,116 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if _grid_manager.grid == null:
 		return
+
+	# Track mouse position for the trail cursor line
+	if event is InputEventMouseMotion:
+		_mouse_pos = event.global_position - global_position
+		if _drawing:
+			queue_redraw()
+		return
+
 	if event is InputEventMouseButton and event.pressed:
-		if event.button_index == MOUSE_BUTTON_LEFT or event.button_index == MOUSE_BUTTON_RIGHT:
-			var local: Vector2 = event.global_position - global_position
-			var ei := _find_nearest_edge(_grid_manager.grid, local)
-			if ei >= 0:
-				var use_yes: bool = (event.button_index == MOUSE_BUTTON_LEFT)
-				_grid_manager.toggle_edge(ei, use_yes)
+		var local: Vector2 = event.global_position - global_position
+		_mouse_pos = local
+
+		# Right-click always cancels drawing mode
+		if event.button_index == MOUSE_BUTTON_RIGHT:
+			if _drawing:
+				_stop_drawing()
+			return
+
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			if not _drawing:
+				# First click: try to start drawing from a dot
+				var di := _find_nearest_dot(_grid_manager.grid, local)
+				if di >= 0:
+					_start_drawing(di)
+			else:
+				# Already drawing: click a nearby dot to extend or click away to stop
+				var di := _find_nearest_dot(_grid_manager.grid, local)
+				if di >= 0 and di != _current_dot:
+					_try_click_extend(di)
+				else:
+					# Clicked away from any dot or on the same dot — stop drawing
+					_stop_drawing()
+
+
+func _find_nearest_dot(grid, local_pos: Vector2) -> int:
+	## Find the nearest dot within DOT_CLICK_DIST of local_pos.
+	var best_dist := 999.0
+	var best_dot := -1
+	for i in range(grid.num_dots):
+		var d := local_pos.distance_to(grid.dots[i])
+		if d < best_dist:
+			best_dist = d
+			best_dot = i
+	if best_dist < DOT_CLICK_DIST:
+		return best_dot
+	return -1
+
+
+func _find_edge_between(grid, dot_a: int, dot_b: int) -> int:
+	## Return the edge index connecting dot_a and dot_b, or -1 if none.
+	for ei: int in grid.dot_edges[dot_a]:
+		var e: Vector2i = grid.edges[ei]
+		if (e.x == dot_b) or (e.y == dot_b):
+			return ei
+	return -1
+
+
+func _start_drawing(dot_idx: int) -> void:
+	_drawing = true
+	_current_dot = dot_idx
+	_trail_edges.clear()
+	queue_redraw()
+
+
+func _stop_drawing() -> void:
+	_drawing = false
+	_current_dot = -1
+	_trail_edges.clear()
+	# Check completion after finishing a stroke
+	_grid_manager.check_completion()
+	_grid_manager.grid_changed.emit()
+	if _grid_manager.solved:
+		_grid_manager.puzzle_solved.emit()
+	queue_redraw()
+
+
+func _try_click_extend(target_dot: int) -> void:
+	## Called when the player clicks a dot while drawing.
+	## If the target dot is adjacent to the current dot, extend or backtrack.
+	var grid = _grid_manager.grid
+	if _current_dot < 0:
+		return
+
+	# Find the edge connecting _current_dot and target_dot
+	var edge_idx := _find_edge_between(grid, _current_dot, target_dot)
+	if edge_idx < 0:
+		# Not adjacent — stop drawing
+		_stop_drawing()
+		return
+
+	# Check if this edge is the last one in our trail (undo / backtrack)
+	if _trail_edges.size() > 0 and _trail_edges[-1] == edge_idx:
+		# Backtracking: undo the last edge
+		_trail_edges.pop_back()
+		_grid_manager.lines[edge_idx] = LC.LINE_UNKNOWN
+		_current_dot = target_dot
+		_grid_manager.grid_changed.emit()
+		return
+
+	# Extend trail: set edge to YES and move cursor to target dot
+	if _grid_manager.lines[edge_idx] == LC.LINE_YES:
+		# Edge already drawn — traverse over it without changing state
+		_trail_edges.append(edge_idx)
+		_current_dot = target_dot
+	else:
+		_grid_manager.lines[edge_idx] = LC.LINE_YES
+		_trail_edges.append(edge_idx)
+		_current_dot = target_dot
+		_grid_manager.grid_changed.emit()
+	queue_redraw()
 
 
 func _find_nearest_edge(grid, local_pos: Vector2) -> int:
