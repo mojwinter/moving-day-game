@@ -15,7 +15,7 @@ const TRAY_W := 164.0
 const TRAY_H := 152.0
 
 const NEW_BTN_RECT := Rect2(2, 2, 24, 12)
-const LIGHT_POS := Vector2(182, 90)  # cosmetic glow at wall edge
+const LIGHT_POS := Vector2(182, 90) # cosmetic glow at wall edge
 
 # --- Colors ---
 const BG_COLOR := Color(0.05, 0.04, 0.09)
@@ -34,7 +34,7 @@ const GRID_LINE := Color(0.14, 0.12, 0.20, 0.15)
 # --- Interaction ---
 var _dragging_id: int = -1
 var _drag_offset := Vector2.ZERO
-var _drag_mouse := Vector2.ZERO  # current mouse pos while dragging
+var _drag_mouse := Vector2.ZERO # current mouse pos while dragging
 var _solved := false
 var _win_tween: Tween = null
 var _win_progress: float = 0.0
@@ -350,7 +350,7 @@ func _play_win() -> void:
 		_win_tween.kill()
 	_win_progress = 0.0
 	_win_tween = create_tween()
-	_win_tween.tween_property(self, "_win_progress", 1.0, 1.5) \
+	_win_tween.tween_property(self , "_win_progress", 1.0, 1.5) \
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
 
 

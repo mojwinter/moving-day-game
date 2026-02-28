@@ -15,82 +15,82 @@ var _puzzles: Array[Dictionary] = [
 	{
 		"name": "helicopter",
 		"silhouette": [
-			Vector2i(2,3), Vector2i(3,3), Vector2i(4,3), Vector2i(5,3),
-			Vector2i(6,3), Vector2i(7,3),
-			Vector2i(3,4), Vector2i(4,4), Vector2i(5,4), Vector2i(6,4),
-			Vector2i(8,4), Vector2i(9,4),
+			Vector2i(2, 3), Vector2i(3, 3), Vector2i(4, 3), Vector2i(5, 3),
+			Vector2i(6, 3), Vector2i(7, 3),
+			Vector2i(3, 4), Vector2i(4, 4), Vector2i(5, 4), Vector2i(6, 4),
+			Vector2i(8, 4), Vector2i(9, 4),
 		],
 		"pieces": ["tet_i", "tet_l", "tet_t"],
 	},
 	{
 		"name": "cat",
 		"silhouette": [
-			Vector2i(4,2), Vector2i(6,2),
-			Vector2i(4,3), Vector2i(5,3), Vector2i(6,3),
-			Vector2i(5,4), Vector2i(5,5),
-			Vector2i(4,6), Vector2i(5,6), Vector2i(6,6),
-			Vector2i(4,7), Vector2i(6,7),
+			Vector2i(4, 2), Vector2i(6, 2),
+			Vector2i(4, 3), Vector2i(5, 3), Vector2i(6, 3),
+			Vector2i(5, 4), Vector2i(5, 5),
+			Vector2i(4, 6), Vector2i(5, 6), Vector2i(6, 6),
+			Vector2i(4, 7), Vector2i(6, 7),
 		],
 		"pieces": ["tet_t", "tet_s", "dom", "dom"],
 	},
 	{
 		"name": "house",
 		"silhouette": [
-			Vector2i(5,2),
-			Vector2i(4,3), Vector2i(5,3), Vector2i(6,3),
-			Vector2i(3,4), Vector2i(4,4), Vector2i(5,4), Vector2i(6,4), Vector2i(7,4),
-			Vector2i(4,5), Vector2i(5,5), Vector2i(6,5),
-			Vector2i(4,6), Vector2i(6,6),
+			Vector2i(5, 2),
+			Vector2i(4, 3), Vector2i(5, 3), Vector2i(6, 3),
+			Vector2i(3, 4), Vector2i(4, 4), Vector2i(5, 4), Vector2i(6, 4), Vector2i(7, 4),
+			Vector2i(4, 5), Vector2i(5, 5), Vector2i(6, 5),
+			Vector2i(4, 6), Vector2i(6, 6),
 		],
 		"pieces": ["pent_t", "tet_l", "tri_l", "dom"],
 	},
 	{
 		"name": "tree",
 		"silhouette": [
-			Vector2i(5,1),
-			Vector2i(4,2), Vector2i(5,2), Vector2i(6,2),
-			Vector2i(3,3), Vector2i(4,3), Vector2i(5,3), Vector2i(6,3), Vector2i(7,3),
-			Vector2i(5,4), Vector2i(5,5), Vector2i(5,6),
+			Vector2i(5, 1),
+			Vector2i(4, 2), Vector2i(5, 2), Vector2i(6, 2),
+			Vector2i(3, 3), Vector2i(4, 3), Vector2i(5, 3), Vector2i(6, 3), Vector2i(7, 3),
+			Vector2i(5, 4), Vector2i(5, 5), Vector2i(5, 6),
 		],
 		"pieces": ["pent_t", "tet_i", "tri_i"],
 	},
 	{
 		"name": "bird",
 		"silhouette": [
-			Vector2i(3,3), Vector2i(5,3),
-			Vector2i(3,4), Vector2i(4,4), Vector2i(5,4),
-			Vector2i(4,5),
-			Vector2i(3,6), Vector2i(4,6), Vector2i(5,6),
+			Vector2i(3, 3), Vector2i(5, 3),
+			Vector2i(3, 4), Vector2i(4, 4), Vector2i(5, 4),
+			Vector2i(4, 5),
+			Vector2i(3, 6), Vector2i(4, 6), Vector2i(5, 6),
 		],
 		"pieces": ["tri_l", "tri_l", "tri_i"],
 	},
 	{
 		"name": "star",
 		"silhouette": [
-			Vector2i(5,1),
-			Vector2i(4,2), Vector2i(5,2), Vector2i(6,2),
-			Vector2i(3,3), Vector2i(4,3), Vector2i(5,3), Vector2i(6,3), Vector2i(7,3),
-			Vector2i(4,4), Vector2i(5,4), Vector2i(6,4),
+			Vector2i(5, 1),
+			Vector2i(4, 2), Vector2i(5, 2), Vector2i(6, 2),
+			Vector2i(3, 3), Vector2i(4, 3), Vector2i(5, 3), Vector2i(6, 3), Vector2i(7, 3),
+			Vector2i(4, 4), Vector2i(5, 4), Vector2i(6, 4),
 		],
 		"pieces": ["pent_t", "tet_i", "tri_i"],
 	},
 	{
 		"name": "rocket",
 		"silhouette": [
-			Vector2i(5,1), Vector2i(5,2),
-			Vector2i(4,3), Vector2i(5,3), Vector2i(6,3),
-			Vector2i(4,4), Vector2i(5,4), Vector2i(6,4),
-			Vector2i(4,5), Vector2i(6,5),
-			Vector2i(5,6),
+			Vector2i(5, 1), Vector2i(5, 2),
+			Vector2i(4, 3), Vector2i(5, 3), Vector2i(6, 3),
+			Vector2i(4, 4), Vector2i(5, 4), Vector2i(6, 4),
+			Vector2i(4, 5), Vector2i(6, 5),
+			Vector2i(5, 6),
 		],
 		"pieces": ["tet_t", "tri_l", "dom", "dom"],
 	},
 	{
 		"name": "key",
 		"silhouette": [
-			Vector2i(3,4), Vector2i(4,4), Vector2i(5,4), Vector2i(6,4),
-			Vector2i(7,4), Vector2i(8,4),
-			Vector2i(3,5), Vector2i(8,5),
+			Vector2i(3, 4), Vector2i(4, 4), Vector2i(5, 4), Vector2i(6, 4),
+			Vector2i(7, 4), Vector2i(8, 4),
+			Vector2i(3, 5), Vector2i(8, 5),
 		],
 		"pieces": ["tet_i", "dom", "dom"],
 	},
@@ -98,21 +98,21 @@ var _puzzles: Array[Dictionary] = [
 
 # --- Shape library ---
 const SHAPES: Dictionary = {
-	"dom":    [Vector2i(0,0), Vector2i(1,0)],
-	"tri_i":  [Vector2i(0,0), Vector2i(1,0), Vector2i(2,0)],
-	"tri_l":  [Vector2i(0,0), Vector2i(1,0), Vector2i(1,1)],
-	"tet_i":  [Vector2i(0,0), Vector2i(1,0), Vector2i(2,0), Vector2i(3,0)],
-	"tet_o":  [Vector2i(0,0), Vector2i(1,0), Vector2i(0,1), Vector2i(1,1)],
-	"tet_t":  [Vector2i(0,0), Vector2i(1,0), Vector2i(2,0), Vector2i(1,1)],
-	"tet_s":  [Vector2i(1,0), Vector2i(2,0), Vector2i(0,1), Vector2i(1,1)],
-	"tet_z":  [Vector2i(0,0), Vector2i(1,0), Vector2i(1,1), Vector2i(2,1)],
-	"tet_l":  [Vector2i(0,0), Vector2i(1,0), Vector2i(2,0), Vector2i(0,1)],
-	"tet_j":  [Vector2i(0,0), Vector2i(1,0), Vector2i(2,0), Vector2i(2,1)],
-	"pent_f": [Vector2i(1,0), Vector2i(2,0), Vector2i(0,1), Vector2i(1,1), Vector2i(1,2)],
-	"pent_p": [Vector2i(0,0), Vector2i(1,0), Vector2i(0,1), Vector2i(1,1), Vector2i(0,2)],
-	"pent_u": [Vector2i(0,0), Vector2i(2,0), Vector2i(0,1), Vector2i(1,1), Vector2i(2,1)],
-	"pent_t": [Vector2i(0,0), Vector2i(1,0), Vector2i(2,0), Vector2i(1,1), Vector2i(1,2)],
-	"pent_l": [Vector2i(0,0), Vector2i(0,1), Vector2i(0,2), Vector2i(0,3), Vector2i(1,3)],
+	"dom": [Vector2i(0, 0), Vector2i(1, 0)],
+	"tri_i": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)],
+	"tri_l": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(1, 1)],
+	"tet_i": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0)],
+	"tet_o": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1)],
+	"tet_t": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(1, 1)],
+	"tet_s": [Vector2i(1, 0), Vector2i(2, 0), Vector2i(0, 1), Vector2i(1, 1)],
+	"tet_z": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(1, 1), Vector2i(2, 1)],
+	"tet_l": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(0, 1)],
+	"tet_j": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(2, 1)],
+	"pent_f": [Vector2i(1, 0), Vector2i(2, 0), Vector2i(0, 1), Vector2i(1, 1), Vector2i(1, 2)],
+	"pent_p": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1), Vector2i(0, 2)],
+	"pent_u": [Vector2i(0, 0), Vector2i(2, 0), Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1)],
+	"pent_t": [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(1, 1), Vector2i(1, 2)],
+	"pent_l": [Vector2i(0, 0), Vector2i(0, 1), Vector2i(0, 2), Vector2i(0, 3), Vector2i(1, 3)],
 }
 
 const PIECE_COLORS: Array[Color] = [
@@ -127,7 +127,7 @@ const PIECE_COLORS: Array[Color] = [
 
 # --- Runtime state ---
 var pieces: Array[ShadowPieceData] = []
-var silhouette: Dictionary = {}  # Vector2i → true (target cells)
+var silhouette: Dictionary = {} # Vector2i → true (target cells)
 var silhouette_name: String = ""
 var _solved: bool = false
 var _current_puzzle: int = -1
@@ -227,10 +227,10 @@ func check_completion() -> bool:
 	var covered := {}
 	for piece in pieces:
 		if not piece.is_placed():
-			return false  # all pieces must be placed
+			return false # all pieces must be placed
 		for cell in piece.get_grid_cells():
 			if covered.has(cell):
-				return false  # overlap
+				return false # overlap
 			covered[cell] = true
 	# Check coverage matches silhouette exactly
 	for cell in silhouette:
@@ -256,7 +256,7 @@ func get_occupied_cells() -> Dictionary:
 			continue
 		for cell in piece.get_grid_cells():
 			if result.has(cell):
-				result[cell] = -1  # overlap marker
+				result[cell] = -1 # overlap marker
 			else:
 				result[cell] = piece.piece_id
 	return result
