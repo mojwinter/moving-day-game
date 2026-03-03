@@ -1,0 +1,100 @@
+name: Build & Release
+
+on:
+  # Manual trigger with version tag input
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. v0.1.0)'
+        required: true
+        type: string
+
+env:
+  GODOT_VERSION: "4.5"
+
+jobs:
+  build-gdextension:
+    name: Build GDExtension (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install SCons
+        run: pip install scons
+
+      - name: Build GDExtension (release)
+        run: scons platform=windows target=template_release
+
+      - name: Upload GDExtension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdextension-windows
+          path: bin/windows/*.dll
+
+  export-game:
+    name: Export Godot Project
+    needs: build-gdextension
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download GDExtension DLLs
+        uses: actions/download-artifact@v4
+        with:
+          name: gdextension-windows
+          path: bin/windows/
+
+      - name: List DLLs for verification
+        run: ls -la bin/windows/
+
+      - name: Export Windows build
+        id: export
+        uses: firebelley/godot-export@v6.0.0
+        with:
+          godot_executable_download_url: https://github.com/godotengine/godot-builds/releases/download/${{ env.GODOT_VERSION }}-stable/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64.zip
+          godot_export_templates_download_url: https://github.com/godotengine/godot-builds/releases/download/${{ env.GODOT_VERSION }}-stable/Godot_v${{ env.GODOT_VERSION }}-stable_export_templates.tpz
+          relative_project_path: ./
+          archive_output: true
+          cache: true
+
+      - name: Upload exported game
+        uses: actions/upload-artifact@v4
+        with:
+          name: moving-day-windows
+          path: ${{ steps.export.outputs.archive_directory }}/*
+
+  release:
+    name: Create GitHub Release
+    needs: export-game
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download exported game
+        uses: actions/download-artifact@v4
+        with:
+          name: moving-day-windows
+          path: release/
+
+      - name: List release files
+        run: ls -la release/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          name: "Moving Day ${{ inputs.version }}"
+          body: |
+            ## Moving Day ${{ inputs.version }}
+
+            Download `MovingDay-Windows.zip`, extract, and run `MovingDay.exe`.
+          files: release/*
+          draft: false
+          prerelease: true
