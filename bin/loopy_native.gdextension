@@ -8,5 +8,5 @@ windows.debug.x86_64 = "res://bin/windows/loopy_native.windows.template_debug.x8
 windows.release.x86_64 = "res://bin/windows/loopy_native.windows.template_release.x86_64.dll"
 linux.debug.x86_64 = "res://bin/linux/libloopy_native.linux.template_debug.x86_64.so"
 linux.release.x86_64 = "res://bin/linux/libloopy_native.linux.template_release.x86_64.so"
-macos.debug = "res://bin/macos/libloopy_native.macos.template_debug.framework"
-macos.release = "res://bin/macos/libloopy_native.macos.template_release.framework"
+macos.debug = "res://bin/macos/libloopy_native.macos.template_debug.dylib"
+macos.release = "res://bin/macos/libloopy_native.macos.template_release.dylib"
