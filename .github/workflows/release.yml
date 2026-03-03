@@ -13,7 +13,7 @@ env:
   GODOT_VERSION: "4.5"
 
 jobs:
-  build-gdextension:
+  build-gdextension-windows:
     name: Build GDExtension (Windows)
     runs-on: windows-latest
     steps:
@@ -38,23 +38,56 @@ jobs:
           name: gdextension-windows
           path: bin/windows/*.dll
 
+  build-gdextension-macos:
+    name: Build GDExtension (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install SCons
+        run: pip install scons
+
+      - name: Build GDExtension (release)
+        run: scons platform=macos target=template_release
+
+      - name: Upload GDExtension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdextension-macos
+          path: bin/macos/*
+
   export-game:
     name: Export Godot Project
-    needs: build-gdextension
+    needs: [build-gdextension-windows, build-gdextension-macos]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download GDExtension DLLs
+      - name: Download GDExtension DLLs (Windows)
         uses: actions/download-artifact@v4
         with:
           name: gdextension-windows
           path: bin/windows/
 
-      - name: List DLLs for verification
-        run: ls -la bin/windows/
+      - name: Download GDExtension libs (macOS)
+        uses: actions/download-artifact@v4
+        with:
+          name: gdextension-macos
+          path: bin/macos/
 
-      - name: Export Windows build
+      - name: List native libs for verification
+        run: |
+          echo "=== Windows ===" && ls -la bin/windows/
+          echo "=== macOS ===" && ls -la bin/macos/
+
+      - name: Export Windows and macOS builds
         id: export
         uses: firebelley/godot-export@v6.0.0
         with:
@@ -64,10 +97,10 @@ jobs:
           archive_output: true
           cache: true
 
-      - name: Upload exported game
+      - name: Upload exported builds
         uses: actions/upload-artifact@v4
         with:
-          name: moving-day-windows
+          name: moving-day-builds
           path: ${{ steps.export.outputs.archive_directory }}/*
 
   release:
@@ -77,10 +110,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Download exported game
+      - name: Download exported builds
         uses: actions/download-artifact@v4
         with:
-          name: moving-day-windows
+          name: moving-day-builds
           path: release/
 
       - name: List release files
@@ -94,7 +127,10 @@ jobs:
           body: |
             ## Moving Day ${{ inputs.version }}
 
-            Download `MovingDay-Windows.zip`, extract, and run `MovingDay.exe`.
+            **Windows:** Download the Windows zip, extract, and run `MovingDay.exe`.
+
+            **macOS:** Download the macOS zip, extract, and run `MovingDay.app`.
+            You may need to right-click > Open the first time (unsigned app).
           files: release/*
           draft: false
           prerelease: true
