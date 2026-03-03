@@ -21,15 +21,25 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Cache GDExtension DLL
+        id: cache-dll
+        uses: actions/cache@v4
+        with:
+          path: bin/windows/*.dll
+          key: gdextension-windows-${{ hashFiles('native/**', 'SConstruct', 'godot-cpp/**') }}
+
       - name: Set up Python
+        if: steps.cache-dll.outputs.cache-hit != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install SCons
+        if: steps.cache-dll.outputs.cache-hit != 'true'
         run: pip install scons
 
       - name: Build GDExtension (release)
+        if: steps.cache-dll.outputs.cache-hit != 'true'
         run: scons platform=windows target=template_release
 
       - name: Upload GDExtension artifact
