@@ -18,6 +18,10 @@ const NO_MARK_SIZE := 4.0
 const RING_GAP := 0.4
 const MAX_CLUE := 3
 
+# Beckon animation — continuous gentle glow pulse until player clicks a star
+const BECKON_SPEED := 0.8 # pulse frequency (cycles/sec)
+const BECKON_PHASE_SPREAD := 0.08 # phase offset between dots
+
 const VIEWPORT_W := 320.0
 const VIEWPORT_H := 180.0
 
@@ -54,6 +58,7 @@ var _time := 0.0
 # Trail drawing state
 var _drawing := false # true while actively drawing a trail
 var _current_dot := -1 # index of the dot the trail cursor is currently at
+var _start_dot := -1 # index of the dot the trail started from
 var _trail_edges: Array = [] # ordered list of edge indices in the current trail stroke
 var _mouse_pos := Vector2.ZERO
 
@@ -65,6 +70,10 @@ var _transitioning := false
 var _transition_t := 0.0
 var _transition_dots: Array = [] # Array of {from: Vector2, to: Vector2, fade: String}
 var _fade_in := 1.0 # 0→1 fade for edges/clues after dots settle
+
+# Beckon animation state
+var _beckon_active := false
+var _beckon_time := 0.0
 
 func _ready() -> void:
 	if _ring_seg_textures.is_empty():
@@ -142,6 +151,7 @@ func _load_current_puzzle() -> void:
 		_win_tween = null
 	_set_bloom_intensity(0.35)
 	_grid_manager.load_from_json(_manifest[_puzzle_index])
+	_start_beckon()
 	queue_redraw()
 
 
@@ -204,10 +214,8 @@ func _draw_puzzle() -> void:
 		var dot_pos: Vector2 = grid.dots[_current_dot]
 		var trail_col := Color(COL_EDGE_YES.r, COL_EDGE_YES.g, COL_EDGE_YES.b, 0.4)
 		draw_line(dot_pos, _mouse_pos, trail_col, 1.0)
-		# Draw a small circle at current dot to show anchor
-		draw_circle(dot_pos, 2.5, Color(COL_EDGE_YES, 0.6))
 
-	# Dots (stars) – shimmer during win
+	# Dots (stars) – shimmer during win, pulse during beckon
 	var star_offset := Vector2(STAR_TEX.get_width() * 0.5, STAR_TEX.get_height() * 0.5)
 	for di in range(grid.num_dots):
 		var p: Vector2 = grid.dots[di]
@@ -216,6 +224,15 @@ func _draw_puzzle() -> void:
 			var twinkle := sin(_win_shimmer * 3.0 + p.x * 0.3 + p.y * 0.2) * 0.5 + 0.5
 			var col := COL_DOT.lerp(COL_WIN_GLOW, twinkle * _win_alpha)
 			draw_texture(STAR_TEX, draw_pos, col)
+		elif _beckon_active:
+			# Pulse between dim and full brightness
+			var phase: float = _beckon_time * BECKON_SPEED * TAU + di * BECKON_PHASE_SPREAD
+			var pulse: float = sin(phase) * 0.5 + 0.5 # 0..1
+			var alpha: float = 0.5 + pulse * 0.5 # fade between 50% and 100%
+			draw_texture(STAR_TEX, draw_pos, Color(COL_DOT, alpha))
+		elif _drawing and di == _current_dot:
+			# Tint the active anchor dot yellow
+			draw_texture(STAR_TEX, draw_pos, COL_EDGE_YES)
 		else:
 			draw_texture(STAR_TEX, draw_pos)
 
@@ -417,6 +434,21 @@ static func _build_ring_textures() -> void:
 		_ring_seg_phases[n] = phases
 
 
+func _has_any_lines() -> bool:
+	for ei in range(_grid_manager.grid.num_edges):
+		if _grid_manager.lines[ei] == LC.LINE_YES:
+			return true
+	return false
+
+
+func _start_beckon() -> void:
+	var grid = _grid_manager.grid
+	if grid == null or grid.num_dots == 0:
+		return
+	_beckon_active = true
+	_beckon_time = 0.0
+
+
 func _draw_edge_glow(d1: Vector2, d2: Vector2, col: Color, alpha: float) -> void:
 	# Outer glow (wider, softer, antialiased for soft edges)
 	draw_line(d1, d2, Color(col, alpha * 0.2), 5.0, true)
@@ -505,10 +537,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		var local: Vector2 = event.global_position - global_position
 		_mouse_pos = local
 
-		# Right-click always cancels drawing mode
+		# Right-click: cancel drawing, or remove a placed line
 		if event.button_index == MOUSE_BUTTON_RIGHT:
 			if _drawing:
 				_stop_drawing()
+			else:
+				var ei := _find_nearest_edge(_grid_manager.grid, local)
+				if ei >= 0 and _grid_manager.lines[ei] == LC.LINE_YES:
+					_grid_manager.lines[ei] = LC.LINE_UNKNOWN
+					_grid_manager.check_completion()
+					_grid_manager.grid_changed.emit()
+					if not _has_any_lines():
+						_start_beckon()
 			return
 
 		if event.button_index == MOUSE_BUTTON_LEFT:
@@ -522,8 +562,11 @@ func _unhandled_input(event: InputEvent) -> void:
 				var di := _find_nearest_dot(_grid_manager.grid, local)
 				if di >= 0 and di != _current_dot:
 					_try_click_extend(di)
+				elif di == _current_dot:
+					# Clicked the same dot — stop drawing
+					_stop_drawing()
 				else:
-					# Clicked away from any dot or on the same dot — stop drawing
+					# Clicked away from any dot — stop drawing
 					_stop_drawing()
 
 
@@ -551,8 +594,10 @@ func _find_edge_between(grid, dot_a: int, dot_b: int) -> int:
 
 
 func _start_drawing(dot_idx: int) -> void:
+	_beckon_active = false
 	_drawing = true
 	_current_dot = dot_idx
+	_start_dot = dot_idx
 	_trail_edges.clear()
 	queue_redraw()
 
@@ -566,6 +611,8 @@ func _stop_drawing() -> void:
 	_grid_manager.grid_changed.emit()
 	if _grid_manager.solved:
 		_grid_manager.puzzle_solved.emit()
+	elif not _has_any_lines():
+		_start_beckon()
 	queue_redraw()
 
 
@@ -602,6 +649,15 @@ func _try_click_extend(target_dot: int) -> void:
 		_trail_edges.append(edge_idx)
 		_current_dot = target_dot
 		_grid_manager.grid_changed.emit()
+
+	# Auto-stop if we've closed a loop: target dot now has 2 YES edges
+	var yes_count := 0
+	for ei: int in grid.dot_edges[target_dot]:
+		if _grid_manager.lines[ei] == LC.LINE_YES:
+			yes_count += 1
+	if yes_count >= 2:
+		_stop_drawing()
+		return
 	queue_redraw()
 
 
@@ -776,4 +832,6 @@ func _process(delta: float) -> void:
 	_update_bg_stars(delta)
 	if _solved:
 		_win_shimmer += delta
+	if _beckon_active:
+		_beckon_time += delta
 	queue_redraw()
