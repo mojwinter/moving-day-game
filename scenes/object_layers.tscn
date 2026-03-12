@@ -1,0 +1,384 @@
+[gd_scene load_steps=5 format=3 uid="uid://dsv71f8irrkhh"]
+
+[ext_resource type="Texture2D" uid="uid://djoitp5vy0fa8" path="res://assets/interior full/global.png" id="img_1"]
+[ext_resource type="Texture2D" uid="uid://b8a2q6s34yaup" path="res://assets/interior full/furniture/beds.png" id="img_2"]
+[ext_resource type="Texture2D" uid="uid://ck1syqhhwxpee" path="res://assets/interior full/furniture/decorations.png" id="img_3"]
+[ext_resource type="Texture2D" uid="uid://calvodaprn4xi" path="res://assets/interior full/big-window.png" id="img_4"]
+
+[node name="ObjectLayers" type="Node2D"]
+
+[node name="Carpet" type="Node2D" parent="."]
+
+[node name="global_27" type="Sprite2D" parent="Carpet"]
+position = Vector2(176, 85)
+texture = ExtResource("img_1")
+centered = false
+region_enabled = true
+region_rect = Rect2(352, 1344, 16, 16)
+
+[node name="global_28" type="Sprite2D" parent="Carpet"]
+position = Vector2(192, 85)
+texture = ExtResource("img_1")
+centered = false
+region_enabled = true
+region_rect = Rect2(368, 1344, 16, 16)
+
+[node name="global_29" type="Sprite2D" parent="Carpet"]
+position = Vector2(208, 85)
+texture = ExtResource("img_1")
+centered = false
+region_enabled = true
+region_rect = Rect2(384, 1344, 16, 16)
+
+[node name="global_30" type="Sprite2D" parent="Carpet"]
+position = Vector2(176, 101)
+texture = ExtResource("img_1")
+centered = false
+region_enabled = true
+region_rect = Rect2(352, 1360, 16, 16)
+
+[node name="global_31" type="Sprite2D" parent="Carpet"]
+position = Vector2(192, 101)
+texture = ExtResource("img_1")
+centered = false
+region_enabled = true
+region_rect = Rect2(368, 1360, 16, 16)
+
+[node name="global_32" type="Sprite2D" parent="Carpet"]
+position = Vector2(208, 101)
+texture = ExtResource("img_1")
+centered = false
+region_enabled = true
+region_rect = Rect2(384, 1360, 16, 16)
+
+[node name="Bed" type="Node2D" parent="."]
+
+[node name="beds_52" type="Sprite2D" parent="Bed"]
+position = Vector2(113, 74)
+texture = ExtResource("img_2")
+centered = false
+region_enabled = true
+region_rect = Rect2(16, 320, 16, 16)
+
+[node name="beds_53" type="Sprite2D" parent="Bed"]
+position = Vector2(97, 74)
+texture = ExtResource("img_2")
+centered = false
+region_enabled = true
+region_rect = Rect2(0, 320, 16, 16)
+
+[node name="beds_54" type="Sprite2D" parent="Bed"]
+position = Vector2(113, 58)
+texture = ExtResource("img_2")
+centered = false
+region_enabled = true
+region_rect = Rect2(16, 304, 16, 16)
+
+[node name="beds_55" type="Sprite2D" parent="Bed"]
+position = Vector2(97, 58)
+texture = ExtResource("img_2")
+centered = false
+region_enabled = true
+region_rect = Rect2(0, 304, 16, 16)
+
+[node name="Furniture" type="Node2D" parent="."]
+
+[node name="Dresser" type="Node2D" parent="Furniture"]
+
+[node name="global_94" type="Sprite2D" parent="Furniture/Dresser"]
+position = Vector2(128, 61)
+texture = ExtResource("img_1")
+centered = false
+region_enabled = true
+region_rect = Rect2(768, 2464, 16, 16)
+
+[node name="global_95" type="Sprite2D" parent="Furniture/Dresser"]
+position = Vector2(144, 61)
+texture = ExtResource("img_1")
+centered = false
+region_enabled = true
+region_rect = Rect2(784, 2464, 16, 16)
+
+[node name="Coffee_Table" type="Node2D" parent="Furniture"]
+
+[node name="global_107" type="Sprite2D" parent="Furniture/Coffee_Table"]
+position = Vector2(192, 84)
+texture = ExtResource("img_1")
+centered = false
+region_enabled = true
+region_rect = Rect2(1440, 1920, 16, 16)
+
+[node name="global_108" type="Sprite2D" parent="Furniture/Coffee_Table"]
+position = Vector2(208, 84)
+texture = ExtResource("img_1")
+centered = false
+region_enabled = true
+region_rect = Rect2(1456, 1920, 16, 16)
+
+[node name="global_109" type="Sprite2D" parent="Furniture/Coffee_Table"]
+position = Vector2(176, 84)
+texture = ExtResource("img_1")
+centered = false
+region_enabled = true
+region_rect = Rect2(1424, 1920, 16, 16)
+
+[node name="Bed_Side_Table" type="Node2D" parent="Furniture"]
+
+[node name="global_97" type="Sprite2D" parent="Furniture/Bed_Side_Table"]
+position = Vector2(80, 61)
+texture = ExtResource("img_1")
+centered = false
+region_enabled = true
+region_rect = Rect2(672, 1344, 16, 16)
+
+[node name="Radio" type="Node2D" parent="Furniture"]
+
+[node name="global_97" type="Sprite2D" parent="Furniture/Radio"]
+position = Vector2(223, 58)
+texture = ExtResource("img_1")
+centered = false
+region_enabled = true
+region_rect = Rect2(1136, 1152, 16, 16)
+
+[node name="Decs" type="Node2D" parent="."]
+
+[node name="SD_Painting" type="Node2D" parent="Decs"]
+
+[node name="decorations_68" type="Sprite2D" parent="Decs/SD_Painting"]
+position = Vector2(126, 30)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(32, 528, 16, 16)
+
+[node name="decorations_69" type="Sprite2D" parent="Decs/SD_Painting"]
+position = Vector2(142, 30)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(48, 528, 16, 16)
+
+[node name="decorations_70" type="Sprite2D" parent="Decs/SD_Painting"]
+position = Vector2(142, 46)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(48, 544, 16, 16)
+
+[node name="decorations_71" type="Sprite2D" parent="Decs/SD_Painting"]
+position = Vector2(126, 46)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(32, 544, 16, 16)
+
+[node name="TV_Stand" type="Node2D" parent="Decs"]
+
+[node name="global_101" type="Sprite2D" parent="Decs/TV_Stand"]
+position = Vector2(192, 61)
+texture = ExtResource("img_1")
+centered = false
+region_enabled = true
+region_rect = Rect2(880, 1728, 16, 16)
+
+[node name="global_102" type="Sprite2D" parent="Decs/TV_Stand"]
+position = Vector2(208, 61)
+texture = ExtResource("img_1")
+centered = false
+region_enabled = true
+region_rect = Rect2(896, 1728, 16, 16)
+
+[node name="global_103" type="Sprite2D" parent="Decs/TV_Stand"]
+position = Vector2(176, 61)
+texture = ExtResource("img_1")
+centered = false
+region_enabled = true
+region_rect = Rect2(864, 1728, 16, 16)
+
+[node name="Bed" type="Node2D" parent="Decs"]
+
+[node name="beds_64" type="Sprite2D" parent="Decs/Bed"]
+position = Vector2(97, 74)
+texture = ExtResource("img_2")
+centered = false
+region_enabled = true
+region_rect = Rect2(768, 320, 16, 16)
+
+[node name="beds_65" type="Sprite2D" parent="Decs/Bed"]
+position = Vector2(113, 74)
+texture = ExtResource("img_2")
+centered = false
+region_enabled = true
+region_rect = Rect2(784, 320, 16, 16)
+
+[node name="beds_66" type="Sprite2D" parent="Decs/Bed"]
+position = Vector2(113, 58)
+texture = ExtResource("img_2")
+centered = false
+region_enabled = true
+region_rect = Rect2(784, 304, 16, 16)
+
+[node name="beds_67" type="Sprite2D" parent="Decs/Bed"]
+position = Vector2(97, 58)
+texture = ExtResource("img_2")
+centered = false
+region_enabled = true
+region_rect = Rect2(768, 304, 16, 16)
+
+[node name="Desk_Chair" type="Node2D" parent="Decs"]
+
+[node name="global_50" type="Sprite2D" parent="Decs/Desk_Chair"]
+position = Vector2(95, 107)
+texture = ExtResource("img_1")
+centered = false
+region_enabled = true
+region_rect = Rect2(1488, 1376, 16, 16)
+
+[node name="global_51" type="Sprite2D" parent="Decs/Desk_Chair"]
+position = Vector2(95, 91)
+texture = ExtResource("img_1")
+centered = false
+region_enabled = true
+region_rect = Rect2(1488, 1360, 16, 16)
+
+[node name="Couch" type="Node2D" parent="Decs"]
+
+[node name="global_23" type="Sprite2D" parent="Decs/Couch"]
+position = Vector2(184, 96)
+texture = ExtResource("img_1")
+centered = false
+region_enabled = true
+region_rect = Rect2(1280, 2048, 16, 16)
+
+[node name="global_24" type="Sprite2D" parent="Decs/Couch"]
+position = Vector2(200, 96)
+texture = ExtResource("img_1")
+centered = false
+region_enabled = true
+region_rect = Rect2(1296, 2048, 16, 16)
+
+[node name="global_25" type="Sprite2D" parent="Decs/Couch"]
+position = Vector2(200, 112)
+texture = ExtResource("img_1")
+centered = false
+region_enabled = true
+region_rect = Rect2(1296, 2064, 16, 16)
+
+[node name="global_26" type="Sprite2D" parent="Decs/Couch"]
+position = Vector2(184, 112)
+texture = ExtResource("img_1")
+centered = false
+region_enabled = true
+region_rect = Rect2(1280, 2064, 16, 16)
+
+[node name="TV" type="Node2D" parent="Decs"]
+
+[node name="decorations_10" type="Sprite2D" parent="Decs/TV"]
+position = Vector2(184, 49)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(544, 176, 16, 16)
+
+[node name="decorations_11" type="Sprite2D" parent="Decs/TV"]
+position = Vector2(200, 49)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(560, 176, 16, 16)
+
+[node name="decorations_12" type="Sprite2D" parent="Decs/TV"]
+position = Vector2(184, 33)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(544, 160, 16, 16)
+
+[node name="decorations_13" type="Sprite2D" parent="Decs/TV"]
+position = Vector2(200, 33)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(560, 160, 16, 16)
+
+[node name="Corner_Plant" type="Node2D" parent="Decs"]
+
+[node name="decorations_33" type="Sprite2D" parent="Decs/Corner_Plant"]
+position = Vector2(224, 126)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(0, 16, 16, 16)
+
+[node name="decorations_34" type="Sprite2D" parent="Decs/Corner_Plant"]
+position = Vector2(223, 111)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(0, 0, 16, 16)
+
+[node name="big_window" type="Sprite2D" parent="Decs"]
+position = Vector2(100, 35)
+texture = ExtResource("img_4")
+centered = false
+region_enabled = true
+region_rect = Rect2(0, 0, 24, 24)
+
+[node name="desk_lamp" type="Sprite2D" parent="Decs"]
+position = Vector2(80, 49)
+texture = ExtResource("img_3")
+centered = false
+flip_h = true
+region_enabled = true
+region_rect = Rect2(336, 0, 16, 16)
+
+[node name="desk_plant" type="Sprite2D" parent="Decs"]
+position = Vector2(128, 50)
+texture = ExtResource("img_1")
+centered = false
+region_enabled = true
+region_rect = Rect2(1600, 1040, 16, 16)
+
+[node name="mushroom_frame" type="Sprite2D" parent="Decs"]
+position = Vector2(143, 54)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(48, 240, 16, 16)
+
+[node name="Posters" type="Node2D" parent="."]
+
+[node name="decorations_42" type="Sprite2D" parent="Posters"]
+position = Vector2(216, 36)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(128, 272, 16, 16)
+
+[node name="decorations_44" type="Sprite2D" parent="Posters"]
+position = Vector2(216, 52)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(128, 288, 16, 16)
+
+[node name="decorations_45" type="Sprite2D" parent="Posters"]
+position = Vector2(169, 36)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(48, 272, 16, 16)
+
+[node name="decorations_46" type="Sprite2D" parent="Posters"]
+position = Vector2(169, 52)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(48, 288, 16, 16)
+
+[node name="decorations_47" type="Sprite2D" parent="Posters"]
+position = Vector2(257, 28)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(240, 240, 16, 16)
