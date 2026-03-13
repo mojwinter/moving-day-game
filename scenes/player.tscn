@@ -1,4 +1,4 @@
-[gd_scene load_steps=139 format=3 uid="uid://dkxc74amhredq"]
+[gd_scene load_steps=139 format=3 uid="uid://dw3rs8dwntwem"]
 
 [ext_resource type="Script" uid="uid://dwvknuqlabnh1" path="res://scripts/player/player.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://cxguekbr31i14" path="res://assets/character/char1_walk.png" id="body_tex"]
@@ -1123,7 +1123,7 @@ animations = [{
 }]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_qlg0r"]
-size = Vector2(10, 6)
+size = Vector2(14, 6)
 
 [node name="Player" type="CharacterBody2D"]
 script = ExtResource("1_script")

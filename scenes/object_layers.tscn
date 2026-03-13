@@ -1,9 +1,41 @@
-[gd_scene load_steps=5 format=3 uid="uid://dsv71f8irrkhh"]
+[gd_scene load_steps=19 format=3 uid="uid://dsv71f8irrkhh"]
 
-[ext_resource type="Texture2D" uid="uid://djoitp5vy0fa8" path="res://assets/interior full/global.png" id="img_1"]
+[ext_resource type="Texture2D" uid="uid://npbxhw51g878" path="res://assets/interior full/furniture/chairs.png" id="chairs"]
+[ext_resource type="Texture2D" uid="uid://cy6gvy0ob1akn" path="res://assets/interior full/furniture/couches.png" id="couches"]
+[ext_resource type="Texture2D" uid="uid://ye6tpnof83w5" path="res://assets/interior full/furniture/custom_furniture.png" id="custom_furniture"]
 [ext_resource type="Texture2D" uid="uid://b8a2q6s34yaup" path="res://assets/interior full/furniture/beds.png" id="img_2"]
 [ext_resource type="Texture2D" uid="uid://ck1syqhhwxpee" path="res://assets/interior full/furniture/decorations.png" id="img_3"]
 [ext_resource type="Texture2D" uid="uid://calvodaprn4xi" path="res://assets/interior full/big-window.png" id="img_4"]
+[ext_resource type="Texture2D" uid="uid://bchtobvsdfa30" path="res://assets/interior full/furniture/kitchen_tiles.png" id="kitchen_tiles"]
+[ext_resource type="Texture2D" uid="uid://ckxhmrmcs7it0" path="res://assets/interior full/basics/rugs.png" id="rugs"]
+[ext_resource type="Texture2D" uid="uid://c1g8t3ew2vius" path="res://assets/interior full/furniture/storage.png" id="storage"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wf5dd"]
+size = Vector2(31, 32)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_p0toq"]
+size = Vector2(27, 16)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ob8eb"]
+size = Vector2(30, 12)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_tgx45"]
+size = Vector2(16, 16)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ad4uh"]
+size = Vector2(13, 13)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_jr80s"]
+size = Vector2(46, 16)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ux5j7"]
+size = Vector2(12, 19)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_26upm"]
+size = Vector2(32, 21)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wasx1"]
+size = Vector2(12, 8.5)
 
 [node name="ObjectLayers" type="Node2D"]
 
@@ -11,45 +43,45 @@
 
 [node name="global_27" type="Sprite2D" parent="Carpet"]
 position = Vector2(176, 85)
-texture = ExtResource("img_1")
+texture = ExtResource("rugs")
 centered = false
 region_enabled = true
-region_rect = Rect2(352, 1344, 16, 16)
+region_rect = Rect2(240, 128, 16, 16)
 
 [node name="global_28" type="Sprite2D" parent="Carpet"]
 position = Vector2(192, 85)
-texture = ExtResource("img_1")
+texture = ExtResource("rugs")
 centered = false
 region_enabled = true
-region_rect = Rect2(368, 1344, 16, 16)
+region_rect = Rect2(256, 128, 16, 16)
 
 [node name="global_29" type="Sprite2D" parent="Carpet"]
 position = Vector2(208, 85)
-texture = ExtResource("img_1")
+texture = ExtResource("rugs")
 centered = false
 region_enabled = true
-region_rect = Rect2(384, 1344, 16, 16)
+region_rect = Rect2(272, 128, 16, 16)
 
 [node name="global_30" type="Sprite2D" parent="Carpet"]
 position = Vector2(176, 101)
-texture = ExtResource("img_1")
+texture = ExtResource("rugs")
 centered = false
 region_enabled = true
-region_rect = Rect2(352, 1360, 16, 16)
+region_rect = Rect2(240, 144, 16, 16)
 
 [node name="global_31" type="Sprite2D" parent="Carpet"]
 position = Vector2(192, 101)
-texture = ExtResource("img_1")
+texture = ExtResource("rugs")
 centered = false
 region_enabled = true
-region_rect = Rect2(368, 1360, 16, 16)
+region_rect = Rect2(256, 144, 16, 16)
 
 [node name="global_32" type="Sprite2D" parent="Carpet"]
 position = Vector2(208, 101)
-texture = ExtResource("img_1")
+texture = ExtResource("rugs")
 centered = false
 region_enabled = true
-region_rect = Rect2(384, 1360, 16, 16)
+region_rect = Rect2(272, 144, 16, 16)
 
 [node name="Bed" type="Node2D" parent="."]
 position = Vector2(1, 0)
@@ -82,119 +114,206 @@ centered = false
 region_enabled = true
 region_rect = Rect2(0, 304, 16, 16)
 
+[node name="StaticBody2D" type="StaticBody2D" parent="Bed"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Bed/StaticBody2D"]
+position = Vector2(112.5, 74)
+shape = SubResource("RectangleShape2D_wf5dd")
+
 [node name="Furniture" type="Node2D" parent="."]
 
 [node name="Dresser" type="Node2D" parent="Furniture"]
 
 [node name="global_94" type="Sprite2D" parent="Furniture/Dresser"]
 position = Vector2(128, 61)
-texture = ExtResource("img_1")
+texture = ExtResource("storage")
 centered = false
 region_enabled = true
-region_rect = Rect2(768, 2464, 16, 16)
+region_rect = Rect2(128, 160, 16, 16)
 
 [node name="global_95" type="Sprite2D" parent="Furniture/Dresser"]
 position = Vector2(144, 61)
-texture = ExtResource("img_1")
+texture = ExtResource("storage")
 centered = false
 region_enabled = true
-region_rect = Rect2(784, 2464, 16, 16)
+region_rect = Rect2(144, 160, 16, 16)
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Furniture/Dresser"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Dresser/StaticBody2D"]
+position = Vector2(143.5, 69)
+shape = SubResource("RectangleShape2D_p0toq")
 
 [node name="Coffee_Table" type="Node2D" parent="Furniture"]
 
 [node name="global_107" type="Sprite2D" parent="Furniture/Coffee_Table"]
 position = Vector2(192, 84)
-texture = ExtResource("img_1")
+texture = ExtResource("custom_furniture")
 centered = false
 region_enabled = true
-region_rect = Rect2(1440, 1920, 16, 16)
+region_rect = Rect2(16, 16, 16, 16)
 
 [node name="global_108" type="Sprite2D" parent="Furniture/Coffee_Table"]
 position = Vector2(208, 84)
-texture = ExtResource("img_1")
+texture = ExtResource("custom_furniture")
 centered = false
 region_enabled = true
-region_rect = Rect2(1456, 1920, 16, 16)
+region_rect = Rect2(32, 16, 16, 16)
 
 [node name="global_109" type="Sprite2D" parent="Furniture/Coffee_Table"]
 position = Vector2(176, 84)
-texture = ExtResource("img_1")
+texture = ExtResource("custom_furniture")
 centered = false
 region_enabled = true
-region_rect = Rect2(1424, 1920, 16, 16)
+region_rect = Rect2(0, 16, 16, 16)
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Furniture/Coffee_Table"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Coffee_Table/StaticBody2D"]
+position = Vector2(200, 94)
+shape = SubResource("RectangleShape2D_ob8eb")
 
 [node name="Bed_Side_Table" type="Node2D" parent="Furniture"]
 
 [node name="global_97" type="Sprite2D" parent="Furniture/Bed_Side_Table"]
 position = Vector2(80, 61)
-texture = ExtResource("img_1")
+texture = ExtResource("kitchen_tiles")
 centered = false
 region_enabled = true
-region_rect = Rect2(672, 1344, 16, 16)
+region_rect = Rect2(32, 320, 16, 16)
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Furniture/Bed_Side_Table"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Bed_Side_Table/StaticBody2D"]
+position = Vector2(88, 69)
+shape = SubResource("RectangleShape2D_tgx45")
 
 [node name="Radio" type="Node2D" parent="Furniture"]
 
 [node name="global_97" type="Sprite2D" parent="Furniture/Radio"]
 position = Vector2(223, 58)
-texture = ExtResource("img_1")
+texture = ExtResource("kitchen_tiles")
 centered = false
 region_enabled = true
-region_rect = Rect2(1136, 1152, 16, 16)
+region_rect = Rect2(496, 128, 16, 16)
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Furniture/Radio"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Radio/StaticBody2D"]
+position = Vector2(231.5, 67.5)
+shape = SubResource("RectangleShape2D_ad4uh")
+
+[node name="TV_Stand" type="Node2D" parent="Furniture"]
+
+[node name="global_101" type="Sprite2D" parent="Furniture/TV_Stand"]
+position = Vector2(192, 61)
+texture = ExtResource("custom_furniture")
+centered = false
+region_enabled = true
+region_rect = Rect2(16, 0, 16, 16)
+
+[node name="global_102" type="Sprite2D" parent="Furniture/TV_Stand"]
+position = Vector2(208, 61)
+texture = ExtResource("custom_furniture")
+centered = false
+region_enabled = true
+region_rect = Rect2(32, 0, 16, 16)
+
+[node name="global_103" type="Sprite2D" parent="Furniture/TV_Stand"]
+position = Vector2(176, 61)
+texture = ExtResource("custom_furniture")
+centered = false
+region_enabled = true
+region_rect = Rect2(0, 0, 16, 16)
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Furniture/TV_Stand"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/TV_Stand/StaticBody2D"]
+position = Vector2(200, 69)
+shape = SubResource("RectangleShape2D_jr80s")
+
+[node name="Desk_Chair" type="Node2D" parent="Furniture"]
+
+[node name="global_50" type="Sprite2D" parent="Furniture/Desk_Chair"]
+position = Vector2(95, 107)
+texture = ExtResource("chairs")
+centered = false
+region_enabled = true
+region_rect = Rect2(480, 112, 16, 16)
+
+[node name="global_51" type="Sprite2D" parent="Furniture/Desk_Chair"]
+position = Vector2(95, 91)
+texture = ExtResource("chairs")
+centered = false
+region_enabled = true
+region_rect = Rect2(480, 96, 16, 16)
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Furniture/Desk_Chair"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Desk_Chair/StaticBody2D"]
+position = Vector2(103, 113.5)
+shape = SubResource("RectangleShape2D_ux5j7")
+
+[node name="Couch" type="Node2D" parent="Furniture"]
+position = Vector2(0, 1)
+
+[node name="global_23" type="Sprite2D" parent="Furniture/Couch"]
+position = Vector2(184, 96)
+texture = ExtResource("couches")
+centered = false
+region_enabled = true
+region_rect = Rect2(640, 240, 16, 16)
+
+[node name="global_24" type="Sprite2D" parent="Furniture/Couch"]
+position = Vector2(200, 96)
+texture = ExtResource("couches")
+centered = false
+region_enabled = true
+region_rect = Rect2(656, 240, 16, 16)
+
+[node name="global_25" type="Sprite2D" parent="Furniture/Couch"]
+position = Vector2(200, 112)
+texture = ExtResource("couches")
+centered = false
+region_enabled = true
+region_rect = Rect2(656, 256, 16, 16)
+
+[node name="global_26" type="Sprite2D" parent="Furniture/Couch"]
+position = Vector2(184, 112)
+texture = ExtResource("couches")
+centered = false
+region_enabled = true
+region_rect = Rect2(640, 256, 16, 16)
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Furniture/Couch"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Couch/StaticBody2D"]
+position = Vector2(200, 117.5)
+shape = SubResource("RectangleShape2D_26upm")
+
+[node name="Corner_Plant" type="Node2D" parent="Furniture"]
+
+[node name="decorations_33" type="Sprite2D" parent="Furniture/Corner_Plant"]
+position = Vector2(224, 126)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(0, 16, 16, 16)
+
+[node name="decorations_34" type="Sprite2D" parent="Furniture/Corner_Plant"]
+position = Vector2(223, 111)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(0, 0, 16, 16)
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Furniture/Corner_Plant"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Furniture/Corner_Plant/StaticBody2D"]
+position = Vector2(232, 138.25)
+shape = SubResource("RectangleShape2D_wasx1")
 
 [node name="Decs" type="Node2D" parent="."]
-
-[node name="SD_Painting" type="Node2D" parent="Decs"]
-
-[node name="decorations_68" type="Sprite2D" parent="Decs/SD_Painting"]
-position = Vector2(126, 30)
-texture = ExtResource("img_3")
-centered = false
-region_enabled = true
-region_rect = Rect2(32, 528, 16, 16)
-
-[node name="decorations_69" type="Sprite2D" parent="Decs/SD_Painting"]
-position = Vector2(142, 30)
-texture = ExtResource("img_3")
-centered = false
-region_enabled = true
-region_rect = Rect2(48, 528, 16, 16)
-
-[node name="decorations_70" type="Sprite2D" parent="Decs/SD_Painting"]
-position = Vector2(142, 46)
-texture = ExtResource("img_3")
-centered = false
-region_enabled = true
-region_rect = Rect2(48, 544, 16, 16)
-
-[node name="decorations_71" type="Sprite2D" parent="Decs/SD_Painting"]
-position = Vector2(126, 46)
-texture = ExtResource("img_3")
-centered = false
-region_enabled = true
-region_rect = Rect2(32, 544, 16, 16)
-
-[node name="TV_Stand" type="Node2D" parent="Decs"]
-
-[node name="global_101" type="Sprite2D" parent="Decs/TV_Stand"]
-position = Vector2(192, 61)
-texture = ExtResource("img_1")
-centered = false
-region_enabled = true
-region_rect = Rect2(880, 1728, 16, 16)
-
-[node name="global_102" type="Sprite2D" parent="Decs/TV_Stand"]
-position = Vector2(208, 61)
-texture = ExtResource("img_1")
-centered = false
-region_enabled = true
-region_rect = Rect2(896, 1728, 16, 16)
-
-[node name="global_103" type="Sprite2D" parent="Decs/TV_Stand"]
-position = Vector2(176, 61)
-texture = ExtResource("img_1")
-centered = false
-region_enabled = true
-region_rect = Rect2(864, 1728, 16, 16)
 
 [node name="Bed" type="Node2D" parent="Decs"]
 position = Vector2(1, 0)
@@ -227,52 +346,6 @@ centered = false
 region_enabled = true
 region_rect = Rect2(768, 304, 16, 16)
 
-[node name="Desk_Chair" type="Node2D" parent="Decs"]
-
-[node name="global_50" type="Sprite2D" parent="Decs/Desk_Chair"]
-position = Vector2(95, 107)
-texture = ExtResource("img_1")
-centered = false
-region_enabled = true
-region_rect = Rect2(1488, 1376, 16, 16)
-
-[node name="global_51" type="Sprite2D" parent="Decs/Desk_Chair"]
-position = Vector2(95, 91)
-texture = ExtResource("img_1")
-centered = false
-region_enabled = true
-region_rect = Rect2(1488, 1360, 16, 16)
-
-[node name="Couch" type="Node2D" parent="Decs"]
-
-[node name="global_23" type="Sprite2D" parent="Decs/Couch"]
-position = Vector2(184, 96)
-texture = ExtResource("img_1")
-centered = false
-region_enabled = true
-region_rect = Rect2(1280, 2048, 16, 16)
-
-[node name="global_24" type="Sprite2D" parent="Decs/Couch"]
-position = Vector2(200, 96)
-texture = ExtResource("img_1")
-centered = false
-region_enabled = true
-region_rect = Rect2(1296, 2048, 16, 16)
-
-[node name="global_25" type="Sprite2D" parent="Decs/Couch"]
-position = Vector2(200, 112)
-texture = ExtResource("img_1")
-centered = false
-region_enabled = true
-region_rect = Rect2(1296, 2064, 16, 16)
-
-[node name="global_26" type="Sprite2D" parent="Decs/Couch"]
-position = Vector2(184, 112)
-texture = ExtResource("img_1")
-centered = false
-region_enabled = true
-region_rect = Rect2(1280, 2064, 16, 16)
-
 [node name="TV" type="Node2D" parent="Decs"]
 
 [node name="decorations_10" type="Sprite2D" parent="Decs/TV"]
@@ -303,22 +376,6 @@ centered = false
 region_enabled = true
 region_rect = Rect2(560, 160, 16, 16)
 
-[node name="Corner_Plant" type="Node2D" parent="Decs"]
-
-[node name="decorations_33" type="Sprite2D" parent="Decs/Corner_Plant"]
-position = Vector2(224, 126)
-texture = ExtResource("img_3")
-centered = false
-region_enabled = true
-region_rect = Rect2(0, 16, 16, 16)
-
-[node name="decorations_34" type="Sprite2D" parent="Decs/Corner_Plant"]
-position = Vector2(223, 111)
-texture = ExtResource("img_3")
-centered = false
-region_enabled = true
-region_rect = Rect2(0, 0, 16, 16)
-
 [node name="big_window" type="Sprite2D" parent="Decs"]
 position = Vector2(101, 35)
 texture = ExtResource("img_4")
@@ -336,10 +393,10 @@ region_rect = Rect2(336, 0, 16, 16)
 
 [node name="desk_plant" type="Sprite2D" parent="Decs"]
 position = Vector2(128, 50)
-texture = ExtResource("img_1")
+texture = ExtResource("img_3")
 centered = false
 region_enabled = true
-region_rect = Rect2(1600, 1040, 16, 16)
+region_rect = Rect2(80, 16, 16, 16)
 
 [node name="mushroom_frame" type="Sprite2D" parent="Decs"]
 position = Vector2(143, 54)
@@ -384,3 +441,33 @@ texture = ExtResource("img_3")
 centered = false
 region_enabled = true
 region_rect = Rect2(240, 240, 16, 16)
+
+[node name="SD_Painting" type="Node2D" parent="Posters"]
+
+[node name="decorations_68" type="Sprite2D" parent="Posters/SD_Painting"]
+position = Vector2(126, 30)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(32, 528, 16, 16)
+
+[node name="decorations_69" type="Sprite2D" parent="Posters/SD_Painting"]
+position = Vector2(142, 30)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(48, 528, 16, 16)
+
+[node name="decorations_70" type="Sprite2D" parent="Posters/SD_Painting"]
+position = Vector2(142, 46)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(48, 544, 16, 16)
+
+[node name="decorations_71" type="Sprite2D" parent="Posters/SD_Painting"]
+position = Vector2(126, 46)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(32, 544, 16, 16)

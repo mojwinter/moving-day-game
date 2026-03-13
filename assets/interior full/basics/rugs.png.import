@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dfcti1vaqih1f"
-path="res://.godot/imported/global.png-40bf126d42d2a45b705487fe5fd53cc6.ctex"
+uid="uid://ckxhmrmcs7it0"
+path="res://.godot/imported/rugs.png-663b30c443876e5f5604b829234d7cc7.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://global.png"
-dest_files=["res://.godot/imported/global.png-40bf126d42d2a45b705487fe5fd53cc6.ctex"]
+source_file="res://assets/interior full/basics/rugs.png"
+dest_files=["res://.godot/imported/rugs.png-663b30c443876e5f5604b829234d7cc7.ctex"]
 
 [params]
 
