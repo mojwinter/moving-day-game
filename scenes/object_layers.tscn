@@ -52,6 +52,7 @@ region_enabled = true
 region_rect = Rect2(384, 1360, 16, 16)
 
 [node name="Bed" type="Node2D" parent="."]
+position = Vector2(1, 0)
 
 [node name="beds_52" type="Sprite2D" parent="Bed"]
 position = Vector2(113, 74)
@@ -196,6 +197,7 @@ region_enabled = true
 region_rect = Rect2(864, 1728, 16, 16)
 
 [node name="Bed" type="Node2D" parent="Decs"]
+position = Vector2(1, 0)
 
 [node name="beds_64" type="Sprite2D" parent="Decs/Bed"]
 position = Vector2(97, 74)
@@ -318,7 +320,7 @@ region_enabled = true
 region_rect = Rect2(0, 0, 16, 16)
 
 [node name="big_window" type="Sprite2D" parent="Decs"]
-position = Vector2(100, 35)
+position = Vector2(101, 35)
 texture = ExtResource("img_4")
 centered = false
 region_enabled = true
