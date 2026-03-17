@@ -1,0 +1,156 @@
+name: Build & Release
+
+on:
+  # Manual trigger with version tag input
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. v0.1.0)'
+        required: true
+        type: string
+
+env:
+  GODOT_VERSION: "4.5"
+
+jobs:
+  build-gdextension-windows:
+    name: Build GDExtension (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Cache GDExtension DLL
+        id: cache-dll
+        uses: actions/cache@v4
+        with:
+          path: bin/windows/*.dll
+          key: gdextension-windows-${{ hashFiles('native/**', 'SConstruct', 'godot-cpp/**') }}
+
+      - name: Set up Python
+        if: steps.cache-dll.outputs.cache-hit != 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install SCons
+        if: steps.cache-dll.outputs.cache-hit != 'true'
+        run: pip install scons
+
+      - name: Build GDExtension (release)
+        if: steps.cache-dll.outputs.cache-hit != 'true'
+        run: scons platform=windows target=template_release
+
+      - name: Upload GDExtension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdextension-windows
+          path: bin/windows/*.dll
+
+  build-gdextension-macos:
+    name: Build GDExtension (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Cache GDExtension dylib
+        id: cache-dylib
+        uses: actions/cache@v4
+        with:
+          path: bin/macos/*
+          key: gdextension-macos-${{ hashFiles('native/**', 'SConstruct', 'godot-cpp/**') }}
+
+      - name: Set up Python
+        if: steps.cache-dylib.outputs.cache-hit != 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install SCons
+        if: steps.cache-dylib.outputs.cache-hit != 'true'
+        run: pip install scons
+
+      - name: Build GDExtension (release)
+        if: steps.cache-dylib.outputs.cache-hit != 'true'
+        run: scons platform=macos target=template_release
+
+      - name: Upload GDExtension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdextension-macos
+          path: bin/macos/*
+
+  export-game:
+    name: Export Godot Project
+    needs: [build-gdextension-windows, build-gdextension-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download GDExtension DLLs (Windows)
+        uses: actions/download-artifact@v4
+        with:
+          name: gdextension-windows
+          path: bin/windows/
+
+      - name: Download GDExtension libs (macOS)
+        uses: actions/download-artifact@v4
+        with:
+          name: gdextension-macos
+          path: bin/macos/
+
+      - name: List native libs for verification
+        run: |
+          echo "=== Windows ===" && ls -la bin/windows/
+          echo "=== macOS ===" && ls -la bin/macos/
+
+      - name: Export Windows and macOS builds
+        id: export
+        uses: firebelley/godot-export@v6.0.0
+        with:
+          godot_executable_download_url: https://github.com/godotengine/godot-builds/releases/download/${{ env.GODOT_VERSION }}-stable/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64.zip
+          godot_export_templates_download_url: https://github.com/godotengine/godot-builds/releases/download/${{ env.GODOT_VERSION }}-stable/Godot_v${{ env.GODOT_VERSION }}-stable_export_templates.tpz
+          relative_project_path: ./
+          archive_output: true
+          cache: true
+
+      - name: Upload exported builds
+        uses: actions/upload-artifact@v4
+        with:
+          name: moving-day-builds
+          path: ${{ steps.export.outputs.archive_directory }}/*
+
+  release:
+    name: Create GitHub Release
+    needs: export-game
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download exported builds
+        uses: actions/download-artifact@v4
+        with:
+          name: moving-day-builds
+          path: release/
+
+      - name: List release files
+        run: ls -la release/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          name: "Moving Day ${{ inputs.version }}"
+          body: |
+            ## Moving Day ${{ inputs.version }}
+
+            **Windows:** Download the Windows zip, extract, and run `MovingDay.exe`.
+
+            **macOS:** Download the macOS zip, extract, and run `MovingDay.app`.
+            You may need to right-click > Open the first time (unsigned app).
+          files: release/*
+          draft: false
+          prerelease: true

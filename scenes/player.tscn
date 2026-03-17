@@ -1,0 +1,1150 @@
+[gd_scene load_steps=139 format=3 uid="uid://dw3rs8dwntwem"]
+
+[ext_resource type="Script" uid="uid://dwvknuqlabnh1" path="res://scripts/player/player.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://cxguekbr31i14" path="res://assets/character/char1_walk.png" id="body_tex"]
+[ext_resource type="Texture2D" uid="uid://c15bff2fcrali" path="res://assets/character/basic_walk.png" id="clothes_tex"]
+[ext_resource type="Texture2D" uid="uid://qiymjjhkv842" path="res://assets/character/eyes_walk.png" id="eyes_tex"]
+[ext_resource type="Texture2D" uid="uid://dywp0njpgg11q" path="res://assets/character/ponytail_walk.png" id="hair_tex"]
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_1"]
+atlas = ExtResource("body_tex")
+region = Rect2(0, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_25"]
+atlas = ExtResource("body_tex")
+region = Rect2(0, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_17"]
+atlas = ExtResource("body_tex")
+region = Rect2(0, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_9"]
+atlas = ExtResource("body_tex")
+region = Rect2(0, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_2"]
+atlas = ExtResource("body_tex")
+region = Rect2(32, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_3"]
+atlas = ExtResource("body_tex")
+region = Rect2(64, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_4"]
+atlas = ExtResource("body_tex")
+region = Rect2(96, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_5"]
+atlas = ExtResource("body_tex")
+region = Rect2(128, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_6"]
+atlas = ExtResource("body_tex")
+region = Rect2(160, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_7"]
+atlas = ExtResource("body_tex")
+region = Rect2(192, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_8"]
+atlas = ExtResource("body_tex")
+region = Rect2(224, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_26"]
+atlas = ExtResource("body_tex")
+region = Rect2(32, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_27"]
+atlas = ExtResource("body_tex")
+region = Rect2(64, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_28"]
+atlas = ExtResource("body_tex")
+region = Rect2(96, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_29"]
+atlas = ExtResource("body_tex")
+region = Rect2(128, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_30"]
+atlas = ExtResource("body_tex")
+region = Rect2(160, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_31"]
+atlas = ExtResource("body_tex")
+region = Rect2(192, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_32"]
+atlas = ExtResource("body_tex")
+region = Rect2(224, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_18"]
+atlas = ExtResource("body_tex")
+region = Rect2(32, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_19"]
+atlas = ExtResource("body_tex")
+region = Rect2(64, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_20"]
+atlas = ExtResource("body_tex")
+region = Rect2(96, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_21"]
+atlas = ExtResource("body_tex")
+region = Rect2(128, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_22"]
+atlas = ExtResource("body_tex")
+region = Rect2(160, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_23"]
+atlas = ExtResource("body_tex")
+region = Rect2(192, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_24"]
+atlas = ExtResource("body_tex")
+region = Rect2(224, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_10"]
+atlas = ExtResource("body_tex")
+region = Rect2(32, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_11"]
+atlas = ExtResource("body_tex")
+region = Rect2(64, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_12"]
+atlas = ExtResource("body_tex")
+region = Rect2(96, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_13"]
+atlas = ExtResource("body_tex")
+region = Rect2(128, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_14"]
+atlas = ExtResource("body_tex")
+region = Rect2(160, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_15"]
+atlas = ExtResource("body_tex")
+region = Rect2(192, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_body_tex_16"]
+atlas = ExtResource("body_tex")
+region = Rect2(224, 32, 32, 32)
+
+[sub_resource type="SpriteFrames" id="body_sf"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_1")
+}],
+"loop": true,
+"name": &"idle_down",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_25")
+}],
+"loop": true,
+"name": &"idle_left",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_17")
+}],
+"loop": true,
+"name": &"idle_right",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_9")
+}],
+"loop": true,
+"name": &"idle_up",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_2")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_3")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_4")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_5")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_6")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_7")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_8")
+}],
+"loop": true,
+"name": &"walk_down",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_25")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_26")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_27")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_28")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_29")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_30")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_31")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_32")
+}],
+"loop": true,
+"name": &"walk_left",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_17")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_18")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_19")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_20")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_21")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_22")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_23")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_24")
+}],
+"loop": true,
+"name": &"walk_right",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_9")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_10")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_11")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_12")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_13")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_14")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_15")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_body_tex_16")
+}],
+"loop": true,
+"name": &"walk_up",
+"speed": 8.0
+}]
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_1"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(0, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_25"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(0, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_17"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(0, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_9"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(0, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_2"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(32, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_3"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(64, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_4"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(96, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_5"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(128, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_6"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(160, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_7"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(192, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_8"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(224, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_26"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(32, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_27"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(64, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_28"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(96, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_29"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(128, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_30"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(160, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_31"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(192, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_32"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(224, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_18"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(32, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_19"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(64, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_20"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(96, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_21"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(128, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_22"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(160, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_23"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(192, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_24"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(224, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_10"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(32, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_11"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(64, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_12"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(96, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_13"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(128, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_14"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(160, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_15"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(192, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_clothes_tex_16"]
+atlas = ExtResource("clothes_tex")
+region = Rect2(224, 32, 32, 32)
+
+[sub_resource type="SpriteFrames" id="clothes_sf"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_1")
+}],
+"loop": true,
+"name": &"idle_down",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_25")
+}],
+"loop": true,
+"name": &"idle_left",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_17")
+}],
+"loop": true,
+"name": &"idle_right",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_9")
+}],
+"loop": true,
+"name": &"idle_up",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_2")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_3")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_4")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_5")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_6")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_7")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_8")
+}],
+"loop": true,
+"name": &"walk_down",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_25")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_26")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_27")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_28")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_29")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_30")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_31")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_32")
+}],
+"loop": true,
+"name": &"walk_left",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_17")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_18")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_19")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_20")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_21")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_22")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_23")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_24")
+}],
+"loop": true,
+"name": &"walk_right",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_9")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_10")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_11")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_12")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_13")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_14")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_15")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_clothes_tex_16")
+}],
+"loop": true,
+"name": &"walk_up",
+"speed": 8.0
+}]
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_1"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(0, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_25"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(0, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_17"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(0, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_9"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(0, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_2"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(32, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_3"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(64, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_4"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(96, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_5"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(128, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_6"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(160, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_7"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(192, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_8"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(224, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_26"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(32, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_27"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(64, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_28"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(96, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_29"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(128, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_30"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(160, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_31"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(192, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_32"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(224, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_18"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(32, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_19"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(64, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_20"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(96, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_21"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(128, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_22"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(160, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_23"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(192, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_24"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(224, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_10"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(32, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_11"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(64, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_12"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(96, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_13"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(128, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_14"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(160, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_15"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(192, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_eyes_tex_16"]
+atlas = ExtResource("eyes_tex")
+region = Rect2(224, 32, 32, 32)
+
+[sub_resource type="SpriteFrames" id="eyes_sf"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_1")
+}],
+"loop": true,
+"name": &"idle_down",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_25")
+}],
+"loop": true,
+"name": &"idle_left",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_17")
+}],
+"loop": true,
+"name": &"idle_right",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_9")
+}],
+"loop": true,
+"name": &"idle_up",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_2")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_3")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_4")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_5")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_6")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_7")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_8")
+}],
+"loop": true,
+"name": &"walk_down",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_25")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_26")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_27")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_28")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_29")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_30")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_31")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_32")
+}],
+"loop": true,
+"name": &"walk_left",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_17")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_18")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_19")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_20")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_21")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_22")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_23")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_24")
+}],
+"loop": true,
+"name": &"walk_right",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_9")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_10")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_11")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_12")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_13")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_14")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_15")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_eyes_tex_16")
+}],
+"loop": true,
+"name": &"walk_up",
+"speed": 8.0
+}]
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_1"]
+atlas = ExtResource("hair_tex")
+region = Rect2(0, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_25"]
+atlas = ExtResource("hair_tex")
+region = Rect2(0, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_17"]
+atlas = ExtResource("hair_tex")
+region = Rect2(0, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_9"]
+atlas = ExtResource("hair_tex")
+region = Rect2(0, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_2"]
+atlas = ExtResource("hair_tex")
+region = Rect2(32, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_3"]
+atlas = ExtResource("hair_tex")
+region = Rect2(64, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_4"]
+atlas = ExtResource("hair_tex")
+region = Rect2(96, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_5"]
+atlas = ExtResource("hair_tex")
+region = Rect2(128, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_6"]
+atlas = ExtResource("hair_tex")
+region = Rect2(160, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_7"]
+atlas = ExtResource("hair_tex")
+region = Rect2(192, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_8"]
+atlas = ExtResource("hair_tex")
+region = Rect2(224, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_26"]
+atlas = ExtResource("hair_tex")
+region = Rect2(32, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_27"]
+atlas = ExtResource("hair_tex")
+region = Rect2(64, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_28"]
+atlas = ExtResource("hair_tex")
+region = Rect2(96, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_29"]
+atlas = ExtResource("hair_tex")
+region = Rect2(128, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_30"]
+atlas = ExtResource("hair_tex")
+region = Rect2(160, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_31"]
+atlas = ExtResource("hair_tex")
+region = Rect2(192, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_32"]
+atlas = ExtResource("hair_tex")
+region = Rect2(224, 96, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_18"]
+atlas = ExtResource("hair_tex")
+region = Rect2(32, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_19"]
+atlas = ExtResource("hair_tex")
+region = Rect2(64, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_20"]
+atlas = ExtResource("hair_tex")
+region = Rect2(96, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_21"]
+atlas = ExtResource("hair_tex")
+region = Rect2(128, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_22"]
+atlas = ExtResource("hair_tex")
+region = Rect2(160, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_23"]
+atlas = ExtResource("hair_tex")
+region = Rect2(192, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_24"]
+atlas = ExtResource("hair_tex")
+region = Rect2(224, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_10"]
+atlas = ExtResource("hair_tex")
+region = Rect2(32, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_11"]
+atlas = ExtResource("hair_tex")
+region = Rect2(64, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_12"]
+atlas = ExtResource("hair_tex")
+region = Rect2(96, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_13"]
+atlas = ExtResource("hair_tex")
+region = Rect2(128, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_14"]
+atlas = ExtResource("hair_tex")
+region = Rect2(160, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_15"]
+atlas = ExtResource("hair_tex")
+region = Rect2(192, 32, 32, 32)
+
+[sub_resource type="AtlasTexture" id="atlas_hair_tex_16"]
+atlas = ExtResource("hair_tex")
+region = Rect2(224, 32, 32, 32)
+
+[sub_resource type="SpriteFrames" id="hair_sf"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_1")
+}],
+"loop": true,
+"name": &"idle_down",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_25")
+}],
+"loop": true,
+"name": &"idle_left",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_17")
+}],
+"loop": true,
+"name": &"idle_right",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_9")
+}],
+"loop": true,
+"name": &"idle_up",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_1")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_2")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_3")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_4")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_5")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_6")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_7")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_8")
+}],
+"loop": true,
+"name": &"walk_down",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_25")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_26")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_27")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_28")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_29")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_30")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_31")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_32")
+}],
+"loop": true,
+"name": &"walk_left",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_17")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_18")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_19")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_20")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_21")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_22")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_23")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_24")
+}],
+"loop": true,
+"name": &"walk_right",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_9")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_10")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_11")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_12")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_13")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_14")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_15")
+}, {
+"duration": 1.0,
+"texture": SubResource("atlas_hair_tex_16")
+}],
+"loop": true,
+"name": &"walk_up",
+"speed": 8.0
+}]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_qlg0r"]
+size = Vector2(14, 6)
+
+[node name="Player" type="CharacterBody2D"]
+script = ExtResource("1_script")
+
+[node name="Body" type="AnimatedSprite2D" parent="."]
+sprite_frames = SubResource("body_sf")
+animation = &"idle_down"
+
+[node name="Clothes" type="AnimatedSprite2D" parent="."]
+sprite_frames = SubResource("clothes_sf")
+animation = &"idle_down"
+
+[node name="Eyes" type="AnimatedSprite2D" parent="."]
+sprite_frames = SubResource("eyes_sf")
+animation = &"idle_down"
+
+[node name="Hair" type="AnimatedSprite2D" parent="."]
+visible = false
+sprite_frames = SubResource("hair_sf")
+animation = &"walk_left"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 13)
+shape = SubResource("RectangleShape2D_qlg0r")
