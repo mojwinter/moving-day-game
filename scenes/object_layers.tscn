@@ -346,6 +346,73 @@ centered = false
 region_enabled = true
 region_rect = Rect2(768, 304, 16, 16)
 
+[node name="Posters" type="Node2D" parent="Decs"]
+
+[node name="decorations_42" type="Sprite2D" parent="Decs/Posters"]
+position = Vector2(216, 36)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(128, 272, 16, 16)
+
+[node name="decorations_44" type="Sprite2D" parent="Decs/Posters"]
+position = Vector2(216, 52)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(128, 288, 16, 16)
+
+[node name="decorations_45" type="Sprite2D" parent="Decs/Posters"]
+position = Vector2(169, 36)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(48, 272, 16, 16)
+
+[node name="decorations_46" type="Sprite2D" parent="Decs/Posters"]
+position = Vector2(169, 52)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(48, 288, 16, 16)
+
+[node name="decorations_47" type="Sprite2D" parent="Decs/Posters"]
+position = Vector2(257, 28)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(240, 240, 16, 16)
+
+[node name="SD_Painting" type="Node2D" parent="Decs/Posters"]
+
+[node name="decorations_68" type="Sprite2D" parent="Decs/Posters/SD_Painting"]
+position = Vector2(126, 30)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(32, 528, 16, 16)
+
+[node name="decorations_69" type="Sprite2D" parent="Decs/Posters/SD_Painting"]
+position = Vector2(142, 30)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(48, 528, 16, 16)
+
+[node name="decorations_70" type="Sprite2D" parent="Decs/Posters/SD_Painting"]
+position = Vector2(142, 46)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(48, 544, 16, 16)
+
+[node name="decorations_71" type="Sprite2D" parent="Decs/Posters/SD_Painting"]
+position = Vector2(126, 46)
+texture = ExtResource("img_3")
+centered = false
+region_enabled = true
+region_rect = Rect2(32, 544, 16, 16)
+
 [node name="TV" type="Node2D" parent="Decs"]
 
 [node name="decorations_10" type="Sprite2D" parent="Decs/TV"]
@@ -404,70 +471,3 @@ texture = ExtResource("img_3")
 centered = false
 region_enabled = true
 region_rect = Rect2(48, 240, 16, 16)
-
-[node name="Posters" type="Node2D" parent="."]
-
-[node name="decorations_42" type="Sprite2D" parent="Posters"]
-position = Vector2(216, 36)
-texture = ExtResource("img_3")
-centered = false
-region_enabled = true
-region_rect = Rect2(128, 272, 16, 16)
-
-[node name="decorations_44" type="Sprite2D" parent="Posters"]
-position = Vector2(216, 52)
-texture = ExtResource("img_3")
-centered = false
-region_enabled = true
-region_rect = Rect2(128, 288, 16, 16)
-
-[node name="decorations_45" type="Sprite2D" parent="Posters"]
-position = Vector2(169, 36)
-texture = ExtResource("img_3")
-centered = false
-region_enabled = true
-region_rect = Rect2(48, 272, 16, 16)
-
-[node name="decorations_46" type="Sprite2D" parent="Posters"]
-position = Vector2(169, 52)
-texture = ExtResource("img_3")
-centered = false
-region_enabled = true
-region_rect = Rect2(48, 288, 16, 16)
-
-[node name="decorations_47" type="Sprite2D" parent="Posters"]
-position = Vector2(257, 28)
-texture = ExtResource("img_3")
-centered = false
-region_enabled = true
-region_rect = Rect2(240, 240, 16, 16)
-
-[node name="SD_Painting" type="Node2D" parent="Posters"]
-
-[node name="decorations_68" type="Sprite2D" parent="Posters/SD_Painting"]
-position = Vector2(126, 30)
-texture = ExtResource("img_3")
-centered = false
-region_enabled = true
-region_rect = Rect2(32, 528, 16, 16)
-
-[node name="decorations_69" type="Sprite2D" parent="Posters/SD_Painting"]
-position = Vector2(142, 30)
-texture = ExtResource("img_3")
-centered = false
-region_enabled = true
-region_rect = Rect2(48, 528, 16, 16)
-
-[node name="decorations_70" type="Sprite2D" parent="Posters/SD_Painting"]
-position = Vector2(142, 46)
-texture = ExtResource("img_3")
-centered = false
-region_enabled = true
-region_rect = Rect2(48, 544, 16, 16)
-
-[node name="decorations_71" type="Sprite2D" parent="Posters/SD_Painting"]
-position = Vector2(126, 46)
-texture = ExtResource("img_3")
-centered = false
-region_enabled = true
-region_rect = Rect2(32, 544, 16, 16)
