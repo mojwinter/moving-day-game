@@ -1,8 +1,10 @@
-[gd_scene load_steps=8 format=4 uid="uid://dyj8jjnp3o1nk"]
+[gd_scene load_steps=10 format=4 uid="uid://dyj8jjnp3o1nk"]
 
 [ext_resource type="PackedScene" uid="uid://dsv71f8irrkhh" path="res://scenes/object_layers.tscn" id="3_7a4el"]
 [ext_resource type="PackedScene" uid="uid://dw3rs8dwntwem" path="res://scenes/player.tscn" id="4_kwhh3"]
 [ext_resource type="Texture2D" uid="uid://dpber47x67p0k" path="res://assets/interior full/furniture/tables.png" id="tables"]
+[ext_resource type="SpriteFrames" path="res://assets/tv_frames/tv_sprite_frames.tres" id="tv_frames"]
+[ext_resource type="Script" uid="uid://b0jtxypahpjvk" path="res://scripts/tv_animation.gd" id="tv_script"]
 [ext_resource type="Texture2D" uid="uid://fhcau3kfx5m1" path="res://assets/interior full/basics/wallpapers.png" id="wallpapers"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_0"]
@@ -530,6 +532,12 @@ tile_map_data = PackedByteArray("AAAEAAEAAQACACQAAAAFAAEAAQADACQAAAAGAAEAAQADACQ
 tile_set = SubResource("TileSet_0")
 
 [node name="ObjectLayers" parent="." instance=ExtResource("3_7a4el")]
+
+[node name="TV" type="AnimatedSprite2D" parent="ObjectLayers"]
+position = Vector2(200, 49)
+sprite_frames = ExtResource("tv_frames")
+animation = &"Horror"
+script = ExtResource("tv_script")
 
 [node name="Player" parent="." instance=ExtResource("4_kwhh3")]
 position = Vector2(144, 97)

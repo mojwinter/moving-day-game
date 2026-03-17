@@ -413,36 +413,6 @@ centered = false
 region_enabled = true
 region_rect = Rect2(32, 544, 16, 16)
 
-[node name="TV" type="Node2D" parent="Decs"]
-
-[node name="decorations_10" type="Sprite2D" parent="Decs/TV"]
-position = Vector2(184, 49)
-texture = ExtResource("img_3")
-centered = false
-region_enabled = true
-region_rect = Rect2(544, 176, 16, 16)
-
-[node name="decorations_11" type="Sprite2D" parent="Decs/TV"]
-position = Vector2(200, 49)
-texture = ExtResource("img_3")
-centered = false
-region_enabled = true
-region_rect = Rect2(560, 176, 16, 16)
-
-[node name="decorations_12" type="Sprite2D" parent="Decs/TV"]
-position = Vector2(184, 33)
-texture = ExtResource("img_3")
-centered = false
-region_enabled = true
-region_rect = Rect2(544, 160, 16, 16)
-
-[node name="decorations_13" type="Sprite2D" parent="Decs/TV"]
-position = Vector2(200, 33)
-texture = ExtResource("img_3")
-centered = false
-region_enabled = true
-region_rect = Rect2(560, 160, 16, 16)
-
 [node name="big_window" type="Sprite2D" parent="Decs"]
 position = Vector2(101, 35)
 texture = ExtResource("img_4")
