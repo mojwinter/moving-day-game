@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=4 uid="uid://dyj8jjnp3o1nk"]
+[gd_scene load_steps=15 format=4 uid="uid://dyj8jjnp3o1nk"]
 
 [ext_resource type="PackedScene" uid="uid://dsv71f8irrkhh" path="res://scenes/object_layers.tscn" id="3_7a4el"]
 [ext_resource type="PackedScene" uid="uid://dw3rs8dwntwem" path="res://scenes/player.tscn" id="4_kwhh3"]
@@ -6,6 +6,7 @@
 [ext_resource type="SpriteFrames" path="res://assets/tv_frames/tv_sprite_frames.tres" id="tv_frames"]
 [ext_resource type="Script" uid="uid://b0jtxypahpjvk" path="res://scripts/tv_animation.gd" id="tv_script"]
 [ext_resource type="Texture2D" uid="uid://fhcau3kfx5m1" path="res://assets/interior full/basics/wallpapers.png" id="wallpapers"]
+[ext_resource type="PackedScene" path="res://scenes/puzzle_switcher.tscn" id="puzzle_switcher"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_0"]
 texture = ExtResource("tables")
@@ -503,6 +504,30 @@ physics_layer_0/collision_layer = 1
 sources/0 = SubResource("TileSetAtlasSource_0")
 sources/1 = SubResource("TileSetAtlasSource_1")
 
+[sub_resource type="Gradient" id="Gradient_tv"]
+offsets = PackedFloat32Array(0, 0.15, 0.4, 1)
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0.5, 1, 1, 1, 0.05, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTex_tv"]
+gradient = SubResource("Gradient_tv")
+width = 256
+height = 256
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(0.5, 0)
+
+[sub_resource type="Gradient" id="Gradient_lamp"]
+offsets = PackedFloat32Array(0, 0.15, 0.35, 1)
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0.4, 1, 1, 1, 0.05, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTex_lamp"]
+gradient = SubResource("Gradient_lamp")
+width = 128
+height = 128
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(0.5, 0)
+
 [node name="main_screen" type="Node2D"]
 
 [node name="TileMap" type="Node2D" parent="."]
@@ -539,5 +564,25 @@ sprite_frames = ExtResource("tv_frames")
 animation = &"Horror"
 script = ExtResource("tv_script")
 
+[node name="CanvasModulate" type="CanvasModulate" parent="."]
+color = Color(0.92, 0.9, 0.93, 1)
+
+[node name="TVLight" type="PointLight2D" parent="."]
+position = Vector2(200, 53)
+color = Color(0.6, 0.75, 1, 1)
+energy = 0.5
+texture = SubResource("GradientTex_tv")
+texture_scale = 1.5
+
+[node name="LampLight" type="PointLight2D" parent="."]
+position = Vector2(93, 59)
+color = Color(1, 0.85, 0.55, 1)
+energy = 0.4
+texture = SubResource("GradientTex_lamp")
+texture_scale = 1.2
+
 [node name="Player" parent="." instance=ExtResource("4_kwhh3")]
 position = Vector2(144, 97)
+
+[node name="PuzzleSwitcher" parent="." instance=ExtResource("puzzle_switcher")]
+z_index = 10

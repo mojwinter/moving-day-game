@@ -9,7 +9,6 @@ const LOOPS_PER_CHANNEL := 1
 @export var speed_scale_override := 0.7
 @export var static_speed_scale := 0.4
 
-
 func _ready() -> void:
 	var sf := sprite_frames
 	if sf == null:
@@ -31,14 +30,16 @@ var _playing_static: bool = false
 
 func _play_current() -> void:
 	_loops_played = 0
+	var anim_name: StringName
 	if _playing_static:
 		_playing_static = false
 		speed_scale = speed_scale_override
-		play(_channels[_current_index])
+		anim_name = _channels[_current_index]
 	else:
 		_playing_static = true
 		speed_scale = static_speed_scale
-		play(&"static")
+		anim_name = &"static"
+	play(anim_name)
 
 
 func _on_loop() -> void:
