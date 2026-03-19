@@ -1,25 +1,57 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=7 format=3 uid="uid://db8a2lkkw7edo"]
 
-[ext_resource type="Script" path="res://scripts/loopy_puzzle/loopy_puzzle.gd" id="1_puzzle"]
-[ext_resource type="Texture2D" path="res://assets/loopy/loopy_bg.png" id="2_bg"]
-[ext_resource type="Shader" path="res://assets/shaders/bloom.gdshader" id="3_bloom"]
+[ext_resource type="Script" uid="uid://8maatvdmpiiw" path="res://scripts/loopy_puzzle/loopy_puzzle.gd" id="1_puzzle"]
+[ext_resource type="Texture2D" uid="uid://cx28m70mjrxi2" path="res://assets/loopy/loopy_bg.png" id="2_bg"]
+[ext_resource type="Shader" uid="uid://ce6ry8qigv7de" path="res://assets/shaders/bloom.gdshader" id="3_bloom"]
+[ext_resource type="Shader" uid="uid://byv5volrs4r61" path="res://assets/shaders/crt.gdshader" id="4_crt"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_bloom"]
 shader = ExtResource("3_bloom")
 shader_parameter/bloom_intensity = 0.35
 shader_parameter/brightness_threshold = 0.45
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_crt"]
+shader = ExtResource("4_crt")
+shader_parameter/overlay = true
+shader_parameter/scanlines_opacity = 0.0
+shader_parameter/scanlines_width = 0.0
+shader_parameter/grille_opacity = 0.14000000665
+shader_parameter/resolution = Vector2(320, 180)
+shader_parameter/pixelate = false
+shader_parameter/roll = false
+shader_parameter/roll_speed = 8.0
+shader_parameter/roll_size = 0.0
+shader_parameter/roll_variation = 1.8
+shader_parameter/distort_intensity = 0.0
+shader_parameter/noise_opacity = 0.0
+shader_parameter/noise_speed = 5.0
+shader_parameter/static_noise_intensity = 0.0
+shader_parameter/aberration = 0.006000047784999962
+shader_parameter/brightness = 1.4
+shader_parameter/discolor = true
+shader_parameter/warp_amount = 1.0
+shader_parameter/clip_warp = false
+shader_parameter/vignette_intensity = 0.4
+shader_parameter/vignette_opacity = 0.3330000158175
+
 [node name="LoopyPuzzle" type="Node2D"]
 script = ExtResource("1_puzzle")
 
 [node name="Background" type="Sprite2D" parent="."]
+z_index = -1
 texture = ExtResource("2_bg")
 centered = false
-z_index = -1
 
 [node name="BloomOverlay" type="ColorRect" parent="."]
 z_index = 1
 material = SubResource("ShaderMaterial_bloom")
+offset_right = 320.0
+offset_bottom = 180.0
+mouse_filter = 2
+
+[node name="CRTOverlay" type="ColorRect" parent="."]
+z_index = 2
+material = SubResource("ShaderMaterial_crt")
 offset_right = 320.0
 offset_bottom = 180.0
 mouse_filter = 2

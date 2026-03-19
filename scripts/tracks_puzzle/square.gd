@@ -3,14 +3,17 @@ extends Node2D
 ## Draws track pieces, no-track marks, and error indicators via _draw().
 
 const TC := preload("res://scripts/tracks_puzzle/tracks_consts.gd")
+var STRAIGHT_TEX: Texture2D = load("res://assets/tracks/straight_track3.png")
 
 signal square_clicked(grid_x: int, grid_y: int, local_pos: Vector2)
 signal square_right_clicked(grid_x: int, grid_y: int, local_pos: Vector2)
 
-const CELL_SIZE := 20.0
+const CELL_SIZE := 28.0
 const CENTER := Vector2(CELL_SIZE / 2.0, CELL_SIZE / 2.0)
-const T3 := CELL_SIZE / 3.0     # one-third
-const T6 := CELL_SIZE / 6.0     # one-sixth
+
+# Rail positions: inner rail at ~30% from edge, outer rail at ~70%
+const RAIL_IN := 8.0
+const RAIL_OUT := 20.0
 
 # Colors
 const BG_COLOR := Color(0.18, 0.16, 0.14)
@@ -81,10 +84,11 @@ func _draw() -> void:
 	if square_data == null:
 		return
 
-	# Determine track color
+	# Determine track tint (white = no tint, so sprite shows at full brightness)
 	var is_error: bool = square_data.has_flag(TC.S_ERROR)
-	var is_clue: bool = square_data.has_flag(TC.S_CLUE)
-	var track_col: Color = ERROR_COLOR if is_error else (CLUE_TRACK_COLOR if is_clue else TRACK_COLOR)
+	var track_col := Color.WHITE
+	if is_error:
+		track_col = ERROR_COLOR
 	if highlight > 0.0 and has_track:
 		track_col = track_col.lerp(HIGHLIGHT_COLOR, highlight)
 
@@ -130,23 +134,14 @@ func _draw_track_shape(flags: int, col: Color) -> void:
 
 
 func _draw_straight_h(col: Color) -> void:
-	# Sleepers first (between rails)
-	for i in range(5):
-		var sx := 2.0 + i * 4.0
-		draw_line(Vector2(sx, 6.0), Vector2(sx, 14.0), SLEEPER_COLOR, 1.0)
-	# Two horizontal rails
-	draw_line(Vector2(0, 6.0), Vector2(CELL_SIZE, 6.0), col, 1.0)
-	draw_line(Vector2(0, 14.0), Vector2(CELL_SIZE, 14.0), col, 1.0)
+	# Rotate the vertical sprite 90° around the center
+	draw_set_transform(CENTER, PI * 0.5, Vector2.ONE)
+	draw_texture(STRAIGHT_TEX, -CENTER, col)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func _draw_straight_v(col: Color) -> void:
-	# Sleepers (between rails)
-	for i in range(5):
-		var sy := 2.0 + i * 4.0
-		draw_line(Vector2(6.0, sy), Vector2(14.0, sy), SLEEPER_COLOR, 1.0)
-	# Two vertical rails
-	draw_line(Vector2(6.0, 0), Vector2(6.0, CELL_SIZE), col, 1.0)
-	draw_line(Vector2(14.0, 0), Vector2(14.0, CELL_SIZE), col, 1.0)
+	draw_texture(STRAIGHT_TEX, Vector2.ZERO, col)
 
 
 func _draw_curve(flags: int, col: Color) -> void:
@@ -169,49 +164,50 @@ func _draw_curve(flags: int, col: Color) -> void:
 	var end_angle := start_angle + PI * 0.5
 
 	# Draw sleepers (radial lines)
-	var nsleepers := 4
+	var nsleepers := 5
 	for i in range(nsleepers):
 		var th := start_angle + (end_angle - start_angle) * (float(i) + 0.5) / float(nsleepers)
-		var inner_pt := arc_center + Vector2(cos(th), sin(th)) * 6.0
-		var outer_pt := arc_center + Vector2(cos(th), sin(th)) * 14.0
+		var dir := Vector2(cos(th), sin(th))
+		var inner_pt := arc_center + dir * float(RAIL_IN)
+		var outer_pt := arc_center + dir * float(RAIL_OUT)
 		draw_line(inner_pt, outer_pt, SLEEPER_COLOR, 1.0)
 
-	# Draw inner and outer arcs (radii match rail positions 6 and 14)
-	draw_arc(arc_center, 6.0, start_angle, end_angle, 12, col, 1.0)
-	draw_arc(arc_center, 14.0, start_angle, end_angle, 12, col, 1.0)
+	# Draw inner and outer arcs
+	draw_arc(arc_center, RAIL_IN, start_angle, end_angle, 16, col, 1.0)
+	draw_arc(arc_center, RAIL_OUT, start_angle, end_angle, 16, col, 1.0)
 
 
 func _draw_stub(d: int, col: Color) -> void:
-	# Draw a short track stub from edge inward (~5px)
-	var stub_len := 5.0
+	# Draw a short track stub from edge inward
+	var stub_len := 7.0
 	if d == TC.DIR_L:
-		draw_line(Vector2(0, 6.0), Vector2(stub_len, 6.0), col, 1.0)
-		draw_line(Vector2(0, 14.0), Vector2(stub_len, 14.0), col, 1.0)
+		draw_line(Vector2(0, RAIL_IN), Vector2(stub_len, RAIL_IN), col, 1.0)
+		draw_line(Vector2(0, RAIL_OUT), Vector2(stub_len, RAIL_OUT), col, 1.0)
 	elif d == TC.DIR_R:
-		draw_line(Vector2(CELL_SIZE - stub_len, 6.0), Vector2(CELL_SIZE, 6.0), col, 1.0)
-		draw_line(Vector2(CELL_SIZE - stub_len, 14.0), Vector2(CELL_SIZE, 14.0), col, 1.0)
+		draw_line(Vector2(CELL_SIZE - stub_len, RAIL_IN), Vector2(CELL_SIZE, RAIL_IN), col, 1.0)
+		draw_line(Vector2(CELL_SIZE - stub_len, RAIL_OUT), Vector2(CELL_SIZE, RAIL_OUT), col, 1.0)
 	elif d == TC.DIR_U:
-		draw_line(Vector2(6.0, 0), Vector2(6.0, stub_len), col, 1.0)
-		draw_line(Vector2(14.0, 0), Vector2(14.0, stub_len), col, 1.0)
+		draw_line(Vector2(RAIL_IN, 0), Vector2(RAIL_IN, stub_len), col, 1.0)
+		draw_line(Vector2(RAIL_OUT, 0), Vector2(RAIL_OUT, stub_len), col, 1.0)
 	elif d == TC.DIR_D:
-		draw_line(Vector2(6.0, CELL_SIZE - stub_len), Vector2(6.0, CELL_SIZE), col, 1.0)
-		draw_line(Vector2(14.0, CELL_SIZE - stub_len), Vector2(14.0, CELL_SIZE), col, 1.0)
+		draw_line(Vector2(RAIL_IN, CELL_SIZE - stub_len), Vector2(RAIL_IN, CELL_SIZE), col, 1.0)
+		draw_line(Vector2(RAIL_OUT, CELL_SIZE - stub_len), Vector2(RAIL_OUT, CELL_SIZE), col, 1.0)
 
 
 func _draw_edge_notrack(d: int) -> void:
 	# Small X at the midpoint of edge d
-	var cx := CELL_SIZE / 2.0
-	var cy := CELL_SIZE / 2.0
+	var ex := CELL_SIZE / 2.0
+	var ey := CELL_SIZE / 2.0
 	if d == TC.DIR_R:
-		cx = CELL_SIZE
+		ex = CELL_SIZE
 	elif d == TC.DIR_L:
-		cx = 0.0
+		ex = 0.0
 	elif d == TC.DIR_D:
-		cy = CELL_SIZE
+		ey = CELL_SIZE
 	elif d == TC.DIR_U:
-		cy = 0.0
-	var off := 2.0
-	var center := Vector2(cx, cy)
+		ey = 0.0
+	var off := 3.0
+	var center := Vector2(ex, ey)
 	draw_line(center + Vector2(-off, -off), center + Vector2(off, off), NOTRACK_COLOR, 1.0)
 	draw_line(center + Vector2(-off, off), center + Vector2(off, -off), NOTRACK_COLOR, 1.0)
 
@@ -230,13 +226,13 @@ func _draw_tree() -> void:
 	var green := Color(TREE_GREEN, deco_alpha)
 	var brown := Color(TREE_TRUNK, deco_alpha)
 	var cx := CELL_SIZE / 2.0
-	# Trunk: 2px wide, 4px tall
-	draw_rect(Rect2(cx - 1, 13, 2, 4), brown)
+	# Trunk: 2px wide, 6px tall
+	draw_rect(Rect2(cx - 1, 18, 2, 6), brown)
 	# Canopy: triangle
 	draw_colored_polygon(PackedVector2Array([
-		Vector2(cx, 3),
-		Vector2(cx - 5, 13),
-		Vector2(cx + 5, 13),
+		Vector2(cx, 4),
+		Vector2(cx - 7, 18),
+		Vector2(cx + 7, 18),
 	]), green)
 
 
@@ -246,30 +242,30 @@ func _draw_house() -> void:
 	var window := Color(HOUSE_WINDOW, deco_alpha)
 	var cx := CELL_SIZE / 2.0
 	# Walls
-	draw_rect(Rect2(cx - 5, 10, 10, 7), wall)
+	draw_rect(Rect2(cx - 7, 14, 14, 10), wall)
 	# Roof triangle
 	draw_colored_polygon(PackedVector2Array([
-		Vector2(cx, 3),
-		Vector2(cx - 6, 10),
-		Vector2(cx + 6, 10),
+		Vector2(cx, 4),
+		Vector2(cx - 8, 14),
+		Vector2(cx + 8, 14),
 	]), roof)
 	# Window
-	draw_rect(Rect2(cx - 1, 12, 2, 2), window)
+	draw_rect(Rect2(cx - 1, 17, 3, 3), window)
 
 
 func _draw_water() -> void:
 	var col := Color(WATER_COLOR, deco_alpha)
 	var hi := Color(WATER_HIGHLIGHT, deco_alpha)
 	# Three wavy lines
-	draw_line(Vector2(4, 7), Vector2(8, 6), hi, 1.0)
-	draw_line(Vector2(8, 6), Vector2(12, 7), hi, 1.0)
-	draw_line(Vector2(12, 7), Vector2(16, 6), hi, 1.0)
-	draw_line(Vector2(3, 10), Vector2(7, 9), col, 1.0)
-	draw_line(Vector2(7, 9), Vector2(11, 10), col, 1.0)
-	draw_line(Vector2(11, 10), Vector2(15, 9), col, 1.0)
-	draw_line(Vector2(5, 13), Vector2(9, 12), col, 1.0)
-	draw_line(Vector2(9, 12), Vector2(13, 13), col, 1.0)
-	draw_line(Vector2(13, 13), Vector2(17, 12), col, 1.0)
+	draw_line(Vector2(5, 10), Vector2(10, 8), hi, 1.0)
+	draw_line(Vector2(10, 8), Vector2(17, 10), hi, 1.0)
+	draw_line(Vector2(17, 10), Vector2(23, 8), hi, 1.0)
+	draw_line(Vector2(4, 14), Vector2(10, 12), col, 1.0)
+	draw_line(Vector2(10, 12), Vector2(16, 14), col, 1.0)
+	draw_line(Vector2(16, 14), Vector2(22, 12), col, 1.0)
+	draw_line(Vector2(6, 18), Vector2(12, 16), col, 1.0)
+	draw_line(Vector2(12, 16), Vector2(18, 18), col, 1.0)
+	draw_line(Vector2(18, 18), Vector2(24, 16), col, 1.0)
 
 
 func _on_click_area_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:

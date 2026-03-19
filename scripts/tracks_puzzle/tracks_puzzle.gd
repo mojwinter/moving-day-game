@@ -2,10 +2,10 @@ extends Node2D
 ## Scene controller for the Night 2 Train Tracks puzzle.
 ## Creates square nodes, draws clue numbers and A/B markers, routes input.
 
-const CELL_SIZE := 20
+const CELL_SIZE := 28
 const GRID_W := 5
 const GRID_H := 4
-const GRID_OFFSET := Vector2(90, 30)
+const GRID_OFFSET := Vector2(62, 6)
 const NEW_BTN_RECT := Rect2(2, 2, 24, 12)
 
 const SquareScene := preload("res://scenes/tracks_puzzle/square.tscn")
