@@ -1,9 +1,10 @@
-[gd_scene load_steps=7 format=3 uid="uid://db8a2lkkw7edo"]
+[gd_scene load_steps=8 format=3 uid="uid://db8a2lkkw7edo"]
 
 [ext_resource type="Script" uid="uid://8maatvdmpiiw" path="res://scripts/loopy_puzzle/loopy_puzzle.gd" id="1_puzzle"]
 [ext_resource type="Texture2D" uid="uid://cx28m70mjrxi2" path="res://assets/loopy/loopy_bg.png" id="2_bg"]
 [ext_resource type="Shader" uid="uid://ce6ry8qigv7de" path="res://assets/shaders/bloom.gdshader" id="3_bloom"]
 [ext_resource type="Shader" uid="uid://byv5volrs4r61" path="res://assets/shaders/crt.gdshader" id="4_crt"]
+[ext_resource type="Script" path="res://scripts/loopy_puzzle/puzzle_draw_layer.gd" id="5_puzzle_layer"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_bloom"]
 shader = ExtResource("3_bloom")
@@ -55,3 +56,7 @@ material = SubResource("ShaderMaterial_crt")
 offset_right = 320.0
 offset_bottom = 180.0
 mouse_filter = 2
+
+[node name="PuzzleLayer" type="Node2D" parent="."]
+z_index = 3
+script = ExtResource("5_puzzle_layer")

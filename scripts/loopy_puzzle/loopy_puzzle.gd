@@ -44,6 +44,9 @@ const BG_STAR_DRIFT_X := 3.0 # px/sec base left-to-right drift
 const BG_STAR_DRIFT_Y := 0.3 # px/sec slight downward drift
 const COL_BG_STAR := Color(0.6, 0.65, 0.8, 0.4)
 
+# Canvas target for draw calls — set to PuzzleLayer during puzzle drawing
+# so puzzle content renders above CRT overlay (no barrel warp).
+var _canvas: CanvasItem = null
 var _grid_manager: Node = null
 var _manifest: Array = []
 var _puzzle_index: int = 0
@@ -196,17 +199,20 @@ func _load_current_puzzle() -> void:
 # ===========================================================================
 
 func _draw() -> void:
-	# Background particles (behind everything)
+	# Background particles only — processed by CRT overlay (with warp)
 	_draw_bg_stars()
 
+
+## Called by PuzzleDrawLayer (z_index 3, above CRT) to draw puzzle content
+## without barrel warp distortion.
+func _draw_puzzle_layer(layer: Node2D) -> void:
+	_canvas = layer
 	if _transitioning:
 		_draw_transition()
 	else:
-		# Draw the puzzle
 		_draw_puzzle()
-
-	# Progress indicator
 	_draw_progress()
+	_canvas = null
 
 
 func _draw_puzzle() -> void:
@@ -215,17 +221,6 @@ func _draw_puzzle() -> void:
 		return
 	var grid = gm.grid
 	var fade_out := (1.0 - _win_fade) * _fade_in
-
-	# Guide layer: draw solution edges faintly so player knows the path
-	if not _solved and fade_out > 0.01 and gm.solution.size() == grid.num_edges:
-		for ei in range(grid.num_edges):
-			if gm.solution[ei] == LC.LINE_YES:
-				var d1: Vector2 = grid.dots[grid.edges[ei].x]
-				var d2: Vector2 = grid.dots[grid.edges[ei].y]
-				# Subtle pulsing guide
-				var pulse := sin(_time * 2.0 + ei * 0.5) * 0.03 + 0.12
-				var guide_col := Color(COL_EDGE_YES.r, COL_EDGE_YES.g, COL_EDGE_YES.b, pulse * fade_out)
-				draw_line(d1, d2, guide_col, 1.0)
 
 	# All edges (unknown shown dim, YES shown bright) — tint near black hole
 	for ei in range(grid.num_edges):
@@ -252,8 +247,8 @@ func _draw_puzzle() -> void:
 	# Drawing-mode: show a line from current dot to mouse cursor
 	if _drawing and _current_dot >= 0 and not _solved:
 		var dot_pos: Vector2 = grid.dots[_current_dot]
-		var trail_col := Color(COL_EDGE_YES.r, COL_EDGE_YES.g, COL_EDGE_YES.b, 0.4)
-		draw_line(dot_pos, _mouse_pos, trail_col, 1.0)
+		var trail_col := _crt_discolor(Color(COL_EDGE_YES.r, COL_EDGE_YES.g, COL_EDGE_YES.b, 0.4))
+		_canvas.draw_line(dot_pos, _mouse_pos, trail_col, 1.0)
 
 	# Dots (stars) – shimmer during win, pulse during beckon, tint near black hole
 	var star_offset := Vector2(STAR_TEX.get_width() * 0.5, STAR_TEX.get_height() * 0.5)
@@ -264,19 +259,19 @@ func _draw_puzzle() -> void:
 		if _solved and _win_shimmer > 0.0:
 			var twinkle := sin(_win_shimmer * 3.0 + p.x * 0.3 + p.y * 0.2) * 0.5 + 0.5
 			var col := COL_DOT.lerp(COL_WIN_GLOW, twinkle * _win_alpha)
-			draw_texture(STAR_TEX, draw_pos, col)
+			_canvas.draw_texture(STAR_TEX, draw_pos, col)
 		elif _beckon_active:
 			var phase: float = _beckon_time * BECKON_SPEED * TAU + di * BECKON_PHASE_SPREAD
 			var pulse: float = sin(phase) * 0.5 + 0.5
 			var alpha: float = 0.5 + pulse * 0.5
 			var col := Color(COL_DOT.lerp(COL_BH_TINT, dot_tint), alpha)
-			draw_texture(STAR_TEX, draw_pos, col)
+			_canvas.draw_texture(STAR_TEX, draw_pos, col)
 		elif _drawing and di == _current_dot:
 			var col := COL_EDGE_YES.lerp(COL_BH_TINT, dot_tint)
-			draw_texture(STAR_TEX, draw_pos, col)
+			_canvas.draw_texture(STAR_TEX, draw_pos, col)
 		else:
 			var col := COL_DOT.lerp(COL_BH_TINT, dot_tint)
-			draw_texture(STAR_TEX, draw_pos, col)
+			_canvas.draw_texture(STAR_TEX, draw_pos, col)
 
 	# Face clues – fade out during win
 	if fade_out > 0.01:
@@ -305,7 +300,7 @@ func _draw_puzzle() -> void:
 
 			var tx := snapped.x - floorf(ts.x * 0.5) + 1.0
 			var ty := snapped.y + 3.0
-			draw_string(PIXEL_FONT, Vector2(tx, ty), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, col)
+			_canvas.draw_string(PIXEL_FONT, Vector2(tx, ty), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, col)
 
 	# Black hole (drawn on top of everything in the puzzle layer)
 	_draw_black_hole()
@@ -328,7 +323,7 @@ func _draw_transition() -> void:
 				p = dot.to
 				alpha = t
 		var draw_pos := Vector2(floorf(p.x - star_offset.x), floorf(p.y - star_offset.y))
-		draw_texture(STAR_TEX, draw_pos, Color(COL_DOT, alpha))
+		_canvas.draw_texture(STAR_TEX, draw_pos, Color(COL_DOT, alpha))
 
 
 ## Ring segment textures built from ring.png at startup.
@@ -494,13 +489,28 @@ func _start_beckon() -> void:
 	_beckon_time = 0.0
 
 
+## Apply the same desaturation + contrast that the CRT shader's discolor pass
+## uses, so puzzle lines rendered above the CRT overlay still look consistent.
+static func _crt_discolor(col: Color) -> Color:
+	var grey := (col.r + col.g + col.b) / 3.0
+	var r := lerpf(col.r, grey, 0.15)
+	var g := lerpf(col.g, grey, 0.15)
+	var b := lerpf(col.b, grey, 0.15)
+	var mid := pow(0.5, 2.2)
+	r = (r - mid) * 1.1 + mid
+	g = (g - mid) * 1.1 + mid
+	b = (b - mid) * 1.1 + mid
+	return Color(clampf(r * 1.1, 0.0, 1.0), clampf(g * 1.1, 0.0, 1.0), clampf(b * 1.1, 0.0, 1.0), col.a)
+
+
 func _draw_edge_glow(d1: Vector2, d2: Vector2, col: Color, alpha: float) -> void:
+	var c := _crt_discolor(col)
 	# Outer glow (wider, softer, antialiased for soft edges)
-	draw_line(d1, d2, Color(col, alpha * 0.2), 5.0, true)
+	_canvas.draw_line(d1, d2, Color(c, alpha * 0.2), 5.0, true)
 	# Inner glow
-	draw_line(d1, d2, Color(col, alpha * 0.4), 3.0, true)
+	_canvas.draw_line(d1, d2, Color(c, alpha * 0.4), 3.0, true)
 	# Core line
-	draw_line(d1, d2, Color(col, alpha), LINE_WIDTH)
+	_canvas.draw_line(d1, d2, Color(c, alpha), LINE_WIDTH)
 
 
 func _draw_clue_ring(center: Vector2, clue: int, yes_count: int, satisfied: bool, fade_out: float) -> void:
@@ -515,8 +525,8 @@ func _draw_clue_ring(center: Vector2, clue: int, yes_count: int, satisfied: bool
 			# Error: lines touching a 0-clue face
 			var ring_col := Color(COL_EDGE_ERROR, COL_EDGE_ERROR.a * fade_out * 0.6)
 			var glow_col := Color(COL_EDGE_ERROR, 0.25 * fade_out)
-			draw_texture(_ring_full_glow, glow_pos, glow_col)
-			draw_texture(_ring_full_tex, draw_pos, ring_col)
+			_canvas.draw_texture(_ring_full_glow, glow_pos, glow_col)
+			_canvas.draw_texture(_ring_full_tex, draw_pos, ring_col)
 		return
 
 	var n := clue
@@ -545,8 +555,8 @@ func _draw_clue_ring(center: Vector2, clue: int, yes_count: int, satisfied: bool
 			glow_col = Color(0.0, 0.0, 0.0, 0.0)
 
 		if glow_col.a > 0.0:
-			draw_texture(seg_glows[i], glow_pos, glow_col)
-		draw_texture(seg_textures[i], draw_pos, seg_col)
+			_canvas.draw_texture(seg_glows[i], glow_pos, glow_col)
+		_canvas.draw_texture(seg_textures[i], draw_pos, seg_col)
 
 
 func _draw_progress() -> void:
@@ -557,7 +567,7 @@ func _draw_progress() -> void:
 	var ts := PIXEL_FONT.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
 	var tx := VIEWPORT_W - ts.x - 4.0
 	var ty := 12.0
-	draw_string(PIXEL_FONT, Vector2(tx, ty), txt, HORIZONTAL_ALIGNMENT_LEFT,
+	_canvas.draw_string(PIXEL_FONT, Vector2(tx, ty), txt, HORIZONTAL_ALIGNMENT_LEFT,
 				-1, font_size, Color(0.5, 0.5, 0.5, 0.6))
 
 
@@ -1128,13 +1138,13 @@ func _draw_black_hole() -> void:
 	# Outer distortion ring — pulsing
 	var pulse := sin(_bh_time * 2.0) * 0.15 + 0.85
 	var outer_r := r * 1.4 * pulse
-	draw_circle(center, outer_r, Color(COL_BH_RING.r, COL_BH_RING.g, COL_BH_RING.b, COL_BH_RING.a * 0.3 * f))
+	_canvas.draw_circle(center, outer_r, Color(COL_BH_RING.r, COL_BH_RING.g, COL_BH_RING.b, COL_BH_RING.a * 0.3 * f))
 
 	# Mid ring
-	draw_circle(center, r * 1.1, Color(COL_BH_RING, COL_BH_RING.a * 0.5 * f))
+	_canvas.draw_circle(center, r * 1.1, Color(COL_BH_RING, COL_BH_RING.a * 0.5 * f))
 
 	# Core — dark void
-	draw_circle(center, r * 0.7, Color(COL_BH_CORE, COL_BH_CORE.a * f))
+	_canvas.draw_circle(center, r * 0.7, Color(COL_BH_CORE, COL_BH_CORE.a * f))
 
 	# Swirl particles orbiting the center
 	for p in _bh_particles:
@@ -1145,7 +1155,7 @@ func _draw_black_hole() -> void:
 		var twinkle := sin(_bh_time * 4.0 + p.phase) * 0.3 + 0.7
 		var col := Color(COL_BH_PARTICLE, COL_BH_PARTICLE.a * twinkle * f)
 		var sz: float = p.size
-		draw_rect(Rect2(floorf(px), floorf(py), sz, sz), col)
+		_canvas.draw_rect(Rect2(floorf(px), floorf(py), sz, sz), col)
 
 	# Inward-streaming particles (Celeste BlackholeBG style)
 	for sp in _bh_streams:
@@ -1156,11 +1166,11 @@ func _draw_black_hole() -> void:
 		var sp_alpha: float = sp.alpha * (1.0 - sp.dist) * f
 		if sp_alpha > 0.01:
 			var sp_col := Color(COL_BH_PARTICLE.r, COL_BH_PARTICLE.g, COL_BH_PARTICLE.b, sp_alpha)
-			draw_rect(Rect2(floorf(sp_pos.x), floorf(sp_pos.y), 1, 1), sp_col)
+			_canvas.draw_rect(Rect2(floorf(sp_pos.x), floorf(sp_pos.y), 1, 1), sp_col)
 
 	# Inner bright accretion dot
 	var acc_pulse := sin(_bh_time * 5.0) * 0.3 + 0.7
-	draw_circle(center, 1.5, Color(0.8, 0.5, 1.0, acc_pulse * 0.6 * f))
+	_canvas.draw_circle(center, 1.5, Color(0.8, 0.5, 1.0, acc_pulse * 0.6 * f))
 
 
 func _bh_get_tint(pos: Vector2) -> float:
@@ -1184,3 +1194,6 @@ func _process(delta: float) -> void:
 	if not _solved and not _transitioning and _fade_in >= 1.0 and _puzzle_index >= BH_FIRST_PUZZLE:
 		_update_black_hole(delta)
 	queue_redraw()
+	var puzzle_layer := get_node_or_null("PuzzleLayer")
+	if puzzle_layer:
+		puzzle_layer.queue_redraw()
