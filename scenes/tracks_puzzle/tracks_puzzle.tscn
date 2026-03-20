@@ -8,3 +8,6 @@ script = ExtResource("1_puzzle")
 
 [node name="GridManager" type="Node" parent="."]
 script = ExtResource("2_grid")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+offset = Vector2(160, 90)

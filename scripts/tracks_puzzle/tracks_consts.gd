@@ -62,3 +62,76 @@ static func dy(dir: int) -> int:
 	if dir == DIR_D: return 1
 	if dir == DIR_U: return -1
 	return 0
+
+
+# --- Grid edge identifiers (border of the grid, not direction bitmasks) ---
+const EDGE_LEFT := 0
+const EDGE_RIGHT := 1
+const EDGE_TOP := 2
+const EDGE_BOTTOM := 3
+
+
+## Returns the opposite edge (LEFT<->RIGHT, TOP<->BOTTOM).
+static func opposite_edge(edge: int) -> int:
+	match edge:
+		EDGE_LEFT: return EDGE_RIGHT
+		EDGE_RIGHT: return EDGE_LEFT
+		EDGE_TOP: return EDGE_BOTTOM
+		EDGE_BOTTOM: return EDGE_TOP
+	return -1
+
+
+## Returns the max valid position index along an edge (exclusive).
+## Top/Bottom edges have w positions; Left/Right edges have h positions.
+static func edge_max_pos(edge: int, w: int, h: int) -> int:
+	if edge == EDGE_LEFT or edge == EDGE_RIGHT:
+		return h
+	return w
+
+
+## Returns the grid cell (x, y) at a given edge and position along that edge.
+static func edge_to_cell(edge: int, pos: int, w: int, h: int) -> Vector2i:
+	match edge:
+		EDGE_LEFT: return Vector2i(0, pos)
+		EDGE_RIGHT: return Vector2i(w - 1, pos)
+		EDGE_TOP: return Vector2i(pos, 0)
+		EDGE_BOTTOM: return Vector2i(pos, h - 1)
+	return Vector2i(-1, -1)
+
+
+## Returns the direction pointing OUT of the grid from the given edge.
+static func edge_outward_dir(edge: int) -> int:
+	match edge:
+		EDGE_LEFT: return DIR_L
+		EDGE_RIGHT: return DIR_R
+		EDGE_TOP: return DIR_U
+		EDGE_BOTTOM: return DIR_D
+	return 0
+
+
+## Returns the slide vector for transitioning off-screen toward the given edge.
+static func edge_slide_dir(edge: int) -> Vector2:
+	match edge:
+		EDGE_LEFT: return Vector2(-1, 0)
+		EDGE_RIGHT: return Vector2(1, 0)
+		EDGE_TOP: return Vector2(0, -1)
+		EDGE_BOTTOM: return Vector2(0, 1)
+	return Vector2.ZERO
+
+
+## Given an off-grid position (nx, ny), returns which edge was crossed, or -1.
+static func detect_exit_edge(nx: int, ny: int, w: int, h: int) -> int:
+	if nx < 0: return EDGE_LEFT
+	if nx >= w: return EDGE_RIGHT
+	if ny < 0: return EDGE_TOP
+	if ny >= h: return EDGE_BOTTOM
+	return -1
+
+
+## Returns the position along the edge for an off-grid coordinate.
+## For LEFT/RIGHT edges, position is the y coordinate.
+## For TOP/BOTTOM edges, position is the x coordinate.
+static func exit_pos_on_edge(edge: int, nx: int, ny: int) -> int:
+	if edge == EDGE_LEFT or edge == EDGE_RIGHT:
+		return ny
+	return nx

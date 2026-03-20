@@ -10,15 +10,20 @@ const TC := preload("res://scripts/tracks_puzzle/tracks_consts.gd")
 signal puzzle_solved
 signal grid_changed
 
-const GRID_W := 5
-const GRID_H := 4
 const DIFF_EASY := 0
+const DIFF_TRICKY := 1
+
+# Grid dimensions — set before calling generate_puzzle / generate_puzzle_from
+var GRID_W: int = 5
+var GRID_H: int = 4
 
 var squares: Array = []          # Array of SquareData, size W*H
 var clue_numbers: Array = []     # size W+H: columns first, then rows
 var num_errors: Array = []       # size W+H: 1 if clue violated
-var row_station: int = -1        # entrance row (left edge)
-var col_station: int = -1        # exit column (bottom edge)
+var entrance_edge: int = -1      # which border the track enters from
+var entrance_pos: int = -1       # position along that border
+var exit_edge: int = -1          # which border the track exits from
+var exit_pos: int = -1           # position along that border
 var completed: bool = false
 var impossible: bool = false
 
@@ -35,18 +40,24 @@ func _ready() -> void:
 # Public API
 # ===========================================================================
 
-func generate_puzzle() -> void:
+func generate_puzzle(diff: int = DIFF_EASY) -> void:
+	generate_puzzle_from(TC.EDGE_LEFT, randi() % GRID_H, diff)
+
+
+func generate_puzzle_from(ent_edge: int, ent_pos: int, diff: int = DIFF_EASY) -> void:
 	completed = false
 	var max_attempts := 2000
 	for _attempt in range(max_attempts):
 		_init_blank()
+		entrance_edge = ent_edge
+		entrance_pos = ent_pos
 		if not _lay_path():
 			continue
 		_mark_track_squares()
 		_compute_clue_numbers()
 		if not _validate_clue_numbers():
 			continue
-		var ret := _add_clues(DIFF_EASY)
+		var ret := _add_clues(diff)
 		if ret != 1:
 			continue
 		# Strip solution from non-clue squares for the player
@@ -54,7 +65,7 @@ func generate_puzzle() -> void:
 		check_completion(true)
 		grid_changed.emit()
 		return
-	# Fallback: should rarely get here with 5x4
+	# Fallback: should rarely get here
 	push_warning("TracksPuzzle: failed to generate after %d attempts" % max_attempts)
 	grid_changed.emit()
 
@@ -105,8 +116,10 @@ func _init_blank() -> void:
 	num_errors = []
 	num_errors.resize(GRID_W + GRID_H)
 	num_errors.fill(0)
-	row_station = -1
-	col_station = -1
+	entrance_edge = -1
+	entrance_pos = -1
+	exit_edge = -1
+	exit_pos = -1
 	completed = false
 	impossible = false
 
@@ -116,10 +129,10 @@ func _init_blank() -> void:
 # ===========================================================================
 
 func _lay_path() -> bool:
-	row_station = randi() % GRID_H
-	var px := 0
-	var py := row_station
-	_e_set(px, py, TC.DIR_L, TC.E_TRACK)
+	var start := TC.edge_to_cell(entrance_edge, entrance_pos, GRID_W, GRID_H)
+	var px := start.x
+	var py := start.y
+	_e_set(px, py, TC.edge_outward_dir(entrance_edge), TC.E_TRACK)
 
 	while _in_grid(px, py):
 		var d := _find_direction(px, py)
@@ -129,10 +142,12 @@ func _lay_path() -> bool:
 		px += TC.dx(d)
 		py += TC.dy(d)
 
-	# Must exit from the bottom edge
-	if py != GRID_H or px < 0 or px >= GRID_W:
+	# Determine which edge we exited from; reject if same as entrance
+	var exited := TC.detect_exit_edge(px, py, GRID_W, GRID_H)
+	if exited < 0 or exited == entrance_edge:
 		return false
-	col_station = px
+	exit_edge = exited
+	exit_pos = TC.exit_pos_on_edge(exited, px, py)
 	return true
 
 
@@ -142,9 +157,11 @@ func _find_direction(x: int, y: int) -> int:
 	for d in dirs:
 		var nx := x + TC.dx(d)
 		var ny := y + TC.dy(d)
-		if nx >= 0 and nx < GRID_W and ny == GRID_H:
-			return d  # exit off the bottom
 		if not _in_grid(nx, ny):
+			# Off-grid: allow exit from any edge except the entrance edge
+			var edge := TC.detect_exit_edge(nx, ny, GRID_W, GRID_H)
+			if edge >= 0 and edge != entrance_edge:
+				return d
 			continue
 		if squares[ny * GRID_W + nx].e_count(TC.E_TRACK) > 0:
 			continue  # already has tracks
@@ -157,15 +174,17 @@ func _find_direction(x: int, y: int) -> int:
 # ===========================================================================
 
 func _mark_track_squares() -> void:
+	var ent_cell := TC.edge_to_cell(entrance_edge, entrance_pos, GRID_W, GRID_H)
+	var ext_cell := TC.edge_to_cell(exit_edge, exit_pos, GRID_W, GRID_H)
 	for x in range(GRID_W):
 		for y in range(GRID_H):
 			var idx := y * GRID_W + x
 			if squares[idx].e_count(TC.E_TRACK) > 0:
 				squares[idx].set_flag(TC.S_TRACK)
 			# Mark entrance and exit as clue squares
-			if x == 0 and y == row_station:
+			if x == ent_cell.x and y == ent_cell.y:
 				squares[idx].set_flag(TC.S_CLUE)
-			if y == GRID_H - 1 and x == col_station:
+			if x == ext_cell.x and y == ext_cell.y:
 				squares[idx].set_flag(TC.S_CLUE)
 
 
@@ -184,14 +203,23 @@ func _validate_clue_numbers() -> bool:
 		if clue_numbers[i] == 0:
 			return false
 	# Reject consecutive 1-clues
-	var last_was_one := true  # disallow 1 at entry point
+	var last_was_one := false
 	for i in range(GRID_W + GRID_H):
 		var is_one: bool = (clue_numbers[i] == 1)
 		if is_one and last_was_one:
 			return false
 		last_was_one = is_one
-	if clue_numbers[GRID_W + GRID_H - 1] == 1:
-		return false  # disallow 1 at exit point
+	# Disallow 1-clue on the entrance row/column and exit row/column
+	var ent_cell := TC.edge_to_cell(entrance_edge, entrance_pos, GRID_W, GRID_H)
+	var ext_cell := TC.edge_to_cell(exit_edge, exit_pos, GRID_W, GRID_H)
+	if clue_numbers[ent_cell.x] == 1:
+		return false
+	if clue_numbers[GRID_W + ent_cell.y] == 1:
+		return false
+	if clue_numbers[ext_cell.x] == 1:
+		return false
+	if clue_numbers[GRID_W + ext_cell.y] == 1:
+		return false
 	return true
 
 
@@ -248,8 +276,6 @@ func _add_clues(diff: int) -> int:
 			squares[i].set_flag(TC.S_CLUE)
 			# Update edge counts from this solve
 			for j in range(GRID_W * GRID_H):
-				var sx := j % GRID_W
-				var sy := j / GRID_W
 				nedges_prev[j] = TC.NBITS[(stripped[j] >> TC.S_TRACK_SHIFT) & TC.ALLDIR]
 
 	return -1  # couldn't make soluble
@@ -262,9 +288,9 @@ func _strip_clues(positions: Array, diff: int) -> int:
 		if not squares[i].has_flag(TC.S_CLUE):
 			continue
 		# Don't strip entrance/exit clues
-		if i % GRID_W == 0 and i / GRID_W == row_station:
+		if i == _start_idx():
 			continue
-		if i / GRID_W == GRID_H - 1 and i % GRID_W == col_station:
+		if i == _end_idx():
 			continue
 
 		var stripped := _strip_copy(_copy_sflags(), i)  # remove this clue
@@ -366,6 +392,11 @@ func _solve_on(sf: Array, diff: int) -> int:
 		did += result[0]
 		imp = imp or result[1]
 		did += _sf_check_loop(sf)
+
+		if diff >= DIFF_TRICKY:
+			did += _sf_check_single(sf)
+			did += _sf_check_loose_ends(sf)
+
 		if did == 0 or imp:
 			break
 
@@ -522,6 +553,153 @@ func _sf_count_clues_sub(sf: Array, si: int, id: int, n: int, target: int) -> Ar
 	return [did, imp]
 
 
+# ===========================================================================
+# Tricky solver rules (port of solve_check_single, tracks.c:1035-1096)
+# ===========================================================================
+
+# For rows/columns needing exactly one more track square: if there's nowhere
+# to run perpendicular and only one existing track cell has a loose end (<=1
+# edge), the new track must extend from that loose end. Everything more than
+# 1 cell away gets NOTRACK.
+func _sf_check_single(sf: Array) -> int:
+	var did := 0
+	for x in range(GRID_W):
+		var target: int = clue_numbers[x]
+		did += _sf_check_single_sub(sf, x, GRID_W, GRID_H, target, TC.DIR_R | TC.DIR_L)
+	for y in range(GRID_H):
+		var target: int = clue_numbers[GRID_W + y]
+		did += _sf_check_single_sub(sf, y * GRID_W, 1, GRID_W, target, TC.DIR_U | TC.DIR_D)
+	return did
+
+
+func _sf_check_single_sub(sf: Array, si: int, id: int, n: int, target: int, perpf: int) -> int:
+	var ctrack := 0
+	var nperp := 0
+	var n1edge := 0
+	var i1edge := 0
+	var did := 0
+	var i := si
+
+	for _j in range(n):
+		if sf[i] & TC.S_TRACK:
+			ctrack += 1
+		var notrack_dirs: int = (sf[i] >> TC.S_NOTRACK_SHIFT) & TC.ALLDIR
+		if (perpf & notrack_dirs) == 0:
+			nperp += 1
+		var ecount: int = TC.NBITS[(sf[i] >> TC.S_TRACK_SHIFT) & TC.ALLDIR]
+		if ecount <= 1:
+			n1edge += 1
+			i1edge = i
+		i += id
+
+	if ctrack != (target - 1):
+		return 0
+	if nperp > 0 or n1edge != 1:
+		return 0
+
+	# We have a match: anything more than 1 away from i1edge cannot contain track
+	var ox := i1edge % GRID_W
+	var oy := i1edge / GRID_W
+	i = si
+	for _j in range(n):
+		var ix := i % GRID_W
+		var iy := i / GRID_W
+		if absi(ox - ix) > 1 or absi(oy - iy) > 1:
+			if not (sf[i] & TC.S_TRACK):
+				did += _sf_set_sflag(sf, ix, iy, TC.S_NOTRACK)
+		i += id
+
+	return did
+
+
+# ===========================================================================
+# Tricky solver rule 2 (port of solve_check_loose_ends, tracks.c:1098-1175)
+# ===========================================================================
+
+# Analyzes loose ends — cells with exactly 1 track edge running parallel to
+# the row/column direction. Three deductions:
+# 1) If loose ends > remaining empty slots → impossible
+# 2) If loose ends == remaining slots, isolated loose ends get their parallel
+#    non-track edge set to NOTRACK (forces them to turn perpendicular)
+# 3) If 1 loose end, 2 empty slots, no perpendicular options → force parallel
+func _sf_check_loose_ends(sf: Array) -> int:
+	var did := 0
+	for x in range(GRID_W):
+		var target: int = clue_numbers[x]
+		did += _sf_check_loose_sub(sf, x, GRID_W, GRID_H, target, TC.DIR_R | TC.DIR_L)
+	for y in range(GRID_H):
+		var target: int = clue_numbers[GRID_W + y]
+		did += _sf_check_loose_sub(sf, y * GRID_W, 1, GRID_W, target, TC.DIR_U | TC.DIR_D)
+	return did
+
+
+func _sf_check_loose_sub(sf: Array, si: int, id: int, n: int, target: int, perpf: int) -> int:
+	var nperp := 0
+	var nloose := 0
+	var e2count := 0
+	var did := 0
+	var parf: int = TC.ALLDIR & (~perpf)
+	var i := si
+
+	for _j in range(n):
+		var fcount: int = TC.NBITS[(sf[i] >> TC.S_TRACK_SHIFT) & TC.ALLDIR]
+		if fcount == 2:
+			e2count += 1
+		sf[i] &= ~TC.S_MARK
+		if fcount == 1 and (parf & ((sf[i] >> TC.S_TRACK_SHIFT) & TC.ALLDIR)):
+			nloose += 1
+			sf[i] |= TC.S_MARK
+		var notrack_dirs: int = (sf[i] >> TC.S_NOTRACK_SHIFT) & TC.ALLDIR
+		if fcount != 2 and not (perpf & notrack_dirs):
+			nperp += 1
+		i += id
+
+	if nloose > (target - e2count):
+		impossible = true
+
+	if nloose > 0 and nloose == (target - e2count):
+		# Force isolated loose ends to turn perpendicular
+		i = si
+		for j in range(n):
+			if not (sf[i] & TC.S_MARK):
+				i += id
+				continue
+			# Skip if adjacent to another loose end (they could join)
+			if j > 0 and (sf[i - id] & TC.S_MARK):
+				i += id
+				continue
+			if j < (n - 1) and (sf[i + id] & TC.S_MARK):
+				i += id
+				continue
+
+			var ix := i % GRID_W
+			var iy := i / GRID_W
+			for k in range(4):
+				var d := 1 << k
+				if (parf & d) and not ((sf[i] >> TC.S_TRACK_SHIFT) & TC.ALLDIR & d):
+					did += _sf_set_sflag(sf, ix, iy, TC.S_NOTRACK)
+					# Actually set the edge NOTRACK, not square NOTRACK
+					_sf_e_set(sf, ix, iy, d, TC.E_NOTRACK)
+					did += 1
+			i += id
+
+	if nloose == 1 and (target - e2count) == 2 and nperp == 0:
+		# 1 loose end, 2 empty slots, no perpendicular → force parallel
+		i = si
+		for _j in range(n):
+			if sf[i] & TC.S_MARK:
+				var ix := i % GRID_W
+				var iy := i / GRID_W
+				for k in range(4):
+					var d := 1 << k
+					if parf & d:
+						var r := _sf_set_eflag(sf, ix, iy, d, TC.E_TRACK)
+						did += r[0]
+			i += id
+
+	return did
+
+
 # Port of solve_check_loop (tracks.c:1226-1276)
 func _sf_check_loop(sf: Array) -> int:
 	var size := GRID_W * GRID_H
@@ -538,8 +716,8 @@ func _sf_check_loop(sf: Array) -> int:
 			if (track_dirs & TC.DIR_D) and y < GRID_H - 1:
 				_dsf_merge(idx, (y + 1) * GRID_W + x)
 
-	var startc := _dsf_find(row_station * GRID_W)
-	var endc := _dsf_find((GRID_H - 1) * GRID_W + col_station)
+	var startc := _dsf_find(_start_idx())
+	var endc := _dsf_find(_end_idx())
 
 	# Check each potential edge between adjacent TRACK squares
 	for x in range(GRID_W):
@@ -744,8 +922,8 @@ func check_completion(mark: bool) -> bool:
 						squares[y * GRID_W + x].set_flag(TC.S_ERROR)
 
 	if mark:
-		var pathclass := _dsf_find(row_station * GRID_W)
-		if pathclass == _dsf_find((GRID_H - 1) * GRID_W + col_station):
+		var pathclass := _dsf_find(_start_idx())
+		if pathclass == _dsf_find(_end_idx()):
 			for i in range(size):
 				if _dsf_find(i) != pathclass:
 					if squares[i].has_flag(TC.S_TRACK) or squares[i].e_count(TC.E_TRACK) > 0:
@@ -865,3 +1043,13 @@ func _dsf_merge(i: int, j: int) -> void:
 
 func _in_grid(x: int, y: int) -> bool:
 	return x >= 0 and x < GRID_W and y >= 0 and y < GRID_H
+
+
+func _start_idx() -> int:
+	var c := TC.edge_to_cell(entrance_edge, entrance_pos, GRID_W, GRID_H)
+	return c.y * GRID_W + c.x
+
+
+func _end_idx() -> int:
+	var c := TC.edge_to_cell(exit_edge, exit_pos, GRID_W, GRID_H)
+	return c.y * GRID_W + c.x

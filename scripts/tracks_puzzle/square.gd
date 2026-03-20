@@ -270,8 +270,9 @@ func _draw_water() -> void:
 
 func _on_click_area_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
 	if event is InputEventMouseButton and event.pressed:
-		# local_pos relative to this node's origin
-		var local := to_local(event.global_position)
+		# Use get_local_mouse_position() — event.global_position is in viewport
+		# coords which breaks when Camera2D has panned
+		var local := get_local_mouse_position()
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			square_clicked.emit(grid_x, grid_y, local)
 		elif event.button_index == MOUSE_BUTTON_RIGHT:
