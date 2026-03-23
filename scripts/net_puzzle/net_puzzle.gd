@@ -1,62 +1,114 @@
 extends Node2D
-## Scene controller for the Night 3 Net/Rotation puzzle.
-## Manages 3 sequential stages: Rotation -> Trace (Solder) -> Calibration.
+## Scene controller for the Net/Rotation puzzle.
+## Manages progressive tiers with escalating grid sizes and mechanics.
 
-const CELL_SIZE := 20
-const GRID_OFFSET := Vector2(110, 30)
-const GRID_W := 5
-const GRID_H := 5
+const SCREEN_SIZE := Vector2(320, 180)
+const HUD_HEIGHT := 16.0  ## Space reserved at top for tier info + new button
+var grid_offset := Vector2.ZERO  ## Computed per tier to center the grid
 const NEW_BTN_RECT := Rect2(2, 2, 24, 12)
 
 const TileScene := preload("res://scenes/net_puzzle/tile.tscn")
 const PIXEL_FONT := preload("res://assets/fonts/m3x6.ttf")
 
-enum Stage { ROTATION, TRACE, CALIBRATION }
-
 @onready var grid_manager = $GridManager
 
-var tile_nodes := []
-var current_stage: int = Stage.ROTATION
+## Tier definitions: each tier adds a new mechanic on top of previous ones.
+## { w, h, wrapping, fog, decay, decay_interval }
+const TIERS := [
+	{ "w": 3, "h": 3, "wrapping": false, "fog": false, "decay": false, "decay_interval": 0.0 },
+	{ "w": 4, "h": 4, "wrapping": false, "fog": false, "decay": false, "decay_interval": 0.0 },
+	{ "w": 5, "h": 5, "wrapping": false, "fog": false, "decay": false, "decay_interval": 0.0 },
+	{ "w": 6, "h": 6, "wrapping": false, "fog": true,  "decay": false, "decay_interval": 0.0 },
+	{ "w": 7, "h": 7, "wrapping": false, "fog": true,  "decay": false, "decay_interval": 0.0 },
+	{ "w": 8, "h": 8, "wrapping": false, "fog": false, "decay": true,  "decay_interval": 5.0 },
+	{ "w": 9, "h": 9, "wrapping": false, "fog": true,  "decay": true,  "decay_interval": 5.0 },
+]
+
+var current_tier: int = 0
+var tile_nodes: Array = []
+var cell_size: float = 20.0
 var _win_tween: Tween = null
-
-# --- Trace stage state ---
-var is_dragging := false
-
-# --- Calibration stage state ---
-var pot_positions: Array = []       # Array of Vector2i — the 3 tiles with pots
-var pot_targets: Array = []         # hidden target value per pot (not shown to player)
-var active_pot_index: int = -1      # which pot is being dragged (-1 = none)
-var pot_drag_start_y: float = 0.0   # mouse Y when drag started
-var pot_drag_start_val: int = 0     # pot value when drag started
-
-const POT_WIN_TOLERANCE := 5        # each dial must be within ±5 of its hidden target
-const POT_LABELS := ["V", "R", "F"]
+var _frame_texture: Texture2D = null
+var _frame_pos: Vector2 = Vector2.ZERO
 
 
 func _ready() -> void:
 	grid_manager.puzzle_solved.connect(_on_puzzle_solved)
-	grid_manager.generate_puzzle()
+	grid_manager.grid_changed.connect(_on_grid_changed)
+	_start_tier(0)
+
+
+func _start_tier(tier: int) -> void:
+	current_tier = clampi(tier, 0, TIERS.size() - 1)
+	var t: Dictionary = TIERS[current_tier]
+
+	cell_size = 16.0
+
+	# Center the grid on screen relative to this node's position
+	var grid_w_px: float = t["w"] * cell_size
+	var grid_h_px: float = t["h"] * cell_size
+	grid_offset = Vector2(
+		floorf((SCREEN_SIZE.x - grid_w_px) / 2.0) - global_position.x,
+		floorf((SCREEN_SIZE.y - grid_h_px) / 2.0) - global_position.y
+	)
+
+	# Clear old tiles
+	for tile_node in tile_nodes:
+		tile_node.queue_free()
+	tile_nodes.clear()
+
+	if _win_tween and _win_tween.is_valid():
+		_win_tween.kill()
+		_win_tween = null
+
+	# Load frame for this grid size
+	var frame_path := "res://assets/network/frame%dx%d.png" % [t["w"], t["h"]]
+	if ResourceLoader.exists(frame_path):
+		_frame_texture = load(frame_path)
+		# Center the frame around the grid
+		var frame_size := _frame_texture.get_size()
+		_frame_pos = Vector2(
+			floorf(grid_offset.x + grid_w_px / 2.0 - frame_size.x / 2.0),
+			floorf(grid_offset.y + grid_h_px / 2.0 - frame_size.y / 2.0)
+		)
+	else:
+		_frame_texture = null
+
+	grid_manager.setup_and_generate(
+		t["w"], t["h"],
+		t["wrapping"],
+		t["fog"], t["decay"], t["decay_interval"]
+	)
 	_create_tile_nodes()
 	_refresh_all_tiles()
+	queue_redraw()
 
 
 func _create_tile_nodes() -> void:
-	for y in range(GRID_H):
-		for x in range(GRID_W):
+	var gw: int = grid_manager.grid_width
+	var gh: int = grid_manager.grid_height
+	for y in range(gh):
+		for x in range(gw):
 			var tile_node = TileScene.instantiate()
-			tile_node.setup(x, y)
-			tile_node.position = GRID_OFFSET + Vector2(x * CELL_SIZE, y * CELL_SIZE)
+			tile_node.setup(x, y, cell_size)
+			tile_node.position = grid_offset + Vector2(x * cell_size, y * cell_size)
 			tile_node.tile_clicked.connect(_on_tile_clicked)
 			add_child(tile_node)
 			tile_nodes.append(tile_node)
 
 
 # =========================================================================
-# Drawing
+# Drawing — HUD
 # =========================================================================
 
 func _draw() -> void:
+	# Frame behind the grid
+	if _frame_texture:
+		draw_texture(_frame_texture, _frame_pos)
+
 	var font_size := 16
+
+	# "New" button
 	draw_rect(NEW_BTN_RECT, Color(0.25, 0.23, 0.2))
 	draw_rect(NEW_BTN_RECT, Color(0.4, 0.38, 0.35), false)
 	var txt := "New"
@@ -68,225 +120,94 @@ func _draw() -> void:
 	var ty := NEW_BTN_RECT.position.y + (NEW_BTN_RECT.size.y - text_h) / 2.0 + ascent
 	draw_string(PIXEL_FONT, Vector2(tx, ty), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0.8, 0.8, 0.7))
 
+	# Tier indicator
+	var tier_txt := "Tier " + str(current_tier + 1)
+	var t: Dictionary = TIERS[current_tier]
+	var size_txt := str(t["w"]) + "x" + str(t["h"])
+	var info_parts := [size_txt]
+	if t["fog"]:
+		info_parts.append("fog")
+	if t["wrapping"]:
+		info_parts.append("wrap")
+	if t["decay"]:
+		info_parts.append("decay")
+	var info_txt := " ".join(info_parts)
+
+	draw_string(PIXEL_FONT, Vector2(32, ascent + 2), tier_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0.9, 0.85, 0.5))
+	draw_string(PIXEL_FONT, Vector2(32, ascent + 2 + text_h), info_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0.55, 0.55, 0.5))
+
 
 # =========================================================================
-# Input routing
+# Input
 # =========================================================================
 
 func _on_tile_clicked(x: int, y: int) -> void:
-	if current_stage == Stage.ROTATION:
-		grid_manager.rotate_tile(x, y)
-		_refresh_all_tiles()
+	var gw: int = grid_manager.grid_width
+	var idx := y * gw + x
+	var td = grid_manager.tiles[idx]
+
+	# Capture pre-rotation state for the clicked tile
+	var old_conns: int = td.connections
+	var old_active: bool = td.is_active
+
+	# Rotate bitmask only — no BFS/fog/win yet
+	grid_manager.rotate_tile_silent(x, y)
+
+	# Refresh so the tile knows its new connections (for _draw after anim ends)
+	_refresh_all_tiles()
+
+	# Kick off visual rotation on the clicked tile
+	tile_nodes[idx].start_rotate_anim(old_conns, old_active)
+
+	# After animation, recompute everything
+	var tween := create_tween()
+	tween.tween_interval(tile_nodes[idx].ROTATE_TIME)
+	tween.tween_callback(_finish_rotate_anim)
+
+
+func _finish_rotate_anim() -> void:
+	# Now recompute BFS, fog, win check, and refresh visuals
+	grid_manager.recompute_and_check()
+	_refresh_all_tiles()
 
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var local: Vector2 = event.global_position - global_position
 		if NEW_BTN_RECT.has_point(local):
-			_on_new_game_pressed()
+			_start_tier(current_tier)
 			get_viewport().set_input_as_handled()
 
-
-func _unhandled_input(event: InputEvent) -> void:
-	if current_stage == Stage.TRACE:
-		_handle_trace_input(event)
-	elif current_stage == Stage.CALIBRATION:
-		_handle_calibration_input(event)
+	# Debug: N = next tier, P = previous tier
+	if OS.is_debug_build() and event is InputEventKey and event.pressed:
+		if event.keycode == KEY_N:
+			_start_tier(current_tier + 1)
+		elif event.keycode == KEY_P:
+			_start_tier(current_tier - 1)
 
 
 # =========================================================================
-# Stage transitions
+# Puzzle solved -> advance tier
 # =========================================================================
 
 func _on_puzzle_solved() -> void:
-	# Rotation stage complete -> play highlight then move to trace
-	_play_win_highlight(_enter_trace_stage)
+	_play_win_highlight(_advance_tier)
 
 
-func _enter_trace_stage() -> void:
-	current_stage = Stage.TRACE
-	# Mark source tile as soldered
-	var src: Vector2i = grid_manager.source_pos
-	grid_manager.tiles[src.y * GRID_W + src.x].is_soldered = true
-	_set_all_draw_mode(1)  # TRACE
-	_refresh_all_tiles()
-
-
-func _enter_calibration_stage() -> void:
-	current_stage = Stage.CALIBRATION
-	_pick_pot_tiles()
-	_generate_targets()
-	_set_all_draw_mode(2)  # CALIBRATION
-	_update_calibration_colors()
-	_refresh_all_tiles()
-
-
-func _on_all_stages_complete() -> void:
-	pass
-
-
-# =========================================================================
-# Trace stage — drag to solder
-# =========================================================================
-
-func _handle_trace_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		if event.pressed:
-			var gpos := _mouse_to_grid(event.global_position)
-			if gpos != Vector2i(-1, -1):
-				var idx := gpos.y * GRID_W + gpos.x
-				if grid_manager.tiles[idx].is_soldered:
-					is_dragging = true
-		else:
-			is_dragging = false
-
-	elif event is InputEventMouseMotion and is_dragging:
-		var gpos := _mouse_to_grid(event.global_position)
-		if gpos == Vector2i(-1, -1):
-			return
-		var idx := gpos.y * GRID_W + gpos.x
-		var td = grid_manager.tiles[idx]
-		if td.is_soldered:
-			return  # already done
-		if (td.connections & 0x0F) == 0:
-			return  # no connections on this tile
-		# Check adjacency to any soldered tile via mutual connection
-		if _is_adjacent_to_soldered(gpos.x, gpos.y):
-			td.is_soldered = true
-			_refresh_all_tiles()
-			_check_trace_win()
-
-
-func _is_adjacent_to_soldered(x: int, y: int) -> bool:
-	var neighbors: Array = grid_manager.get_connected_neighbors(x, y)
-	for npos in neighbors:
-		var nidx: int = npos.y * GRID_W + npos.x
-		if grid_manager.tiles[nidx].is_soldered:
-			return true
-	return false
-
-
-func _check_trace_win() -> void:
-	for tile in grid_manager.tiles:
-		if (tile.connections & 0x0F) != 0 and not tile.is_soldered:
-			return
-	# All connected tiles soldered
-	_play_win_highlight(_enter_calibration_stage)
-
-
-# =========================================================================
-# Calibration stage — potentiometer knobs on tiles
-# =========================================================================
-
-func _pick_pot_tiles() -> void:
-	pot_positions.clear()
-	# Gather candidate tiles: non-source, has connections
-	var candidates := []
-	for y in range(GRID_H):
-		for x in range(GRID_W):
-			var idx := y * GRID_W + x
-			var td = grid_manager.tiles[idx]
-			if not td.is_source and (td.connections & 0x0F) != 0:
-				candidates.append(Vector2i(x, y))
-	candidates.shuffle()
-	for i in range(mini(3, candidates.size())):
-		var pos: Vector2i = candidates[i]
-		pot_positions.append(pos)
-		var td = grid_manager.tiles[pos.y * GRID_W + pos.x]
-		td.has_pot = true
-		td.pot_value = 50
-		td.pot_label = POT_LABELS[i]
-
-
-func _generate_targets() -> void:
-	pot_targets.clear()
-	for i in range(pot_positions.size()):
-		pot_targets.append(randi_range(10, 90))
-
-
-func _handle_calibration_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		if event.pressed:
-			# Check if clicking on a pot tile
-			var gpos := _mouse_to_grid(event.global_position)
-			if gpos != Vector2i(-1, -1):
-				for i in range(pot_positions.size()):
-					if pot_positions[i] == gpos:
-						active_pot_index = i
-						pot_drag_start_y = event.global_position.y
-						pot_drag_start_val = grid_manager.tiles[gpos.y * GRID_W + gpos.x].pot_value
-						break
-		else:
-			active_pot_index = -1
-
-	elif event is InputEventMouseMotion and active_pot_index >= 0:
-		# Drag up = increase, drag down = decrease
-		var delta_y: float = pot_drag_start_y - event.global_position.y
-		var delta_val: int = int(delta_y / 2.0)  # 2 pixels per unit
-		var new_val: int = clampi(pot_drag_start_val + delta_val, 0, 100)
-		var pos: Vector2i = pot_positions[active_pot_index]
-		grid_manager.tiles[pos.y * GRID_W + pos.x].pot_value = new_val
-		_update_calibration_colors()
-		_refresh_all_tiles()
-		_check_calibration_win()
-
-
-func _pot_error(i: int) -> int:
-	var pos: Vector2i = pot_positions[i]
-	var val: int = grid_manager.tiles[pos.y * GRID_W + pos.x].pot_value
-	return absi(val - pot_targets[i])
-
-
-## Map error distance to a smooth color gradient:
-## green (close) -> yellow -> orange -> red/dim (far)
-func _error_to_color(error: int) -> Color:
-	if error <= POT_WIN_TOLERANCE:
-		return Color(0.2, 1.0, 0.3)           # bright green — locked in
-	var t: float = clampf(float(error - POT_WIN_TOLERANCE) / 45.0, 0.0, 1.0)
-	# green(0) -> yellow(0.33) -> orange(0.66) -> dim red(1.0)
-	if t < 0.33:
-		var s: float = t / 0.33
-		return Color(0.2 + 0.5 * s, 1.0 - 0.1 * s, 0.3 - 0.1 * s)  # green -> yellow
-	elif t < 0.66:
-		var s: float = (t - 0.33) / 0.33
-		return Color(0.7 + 0.2 * s, 0.9 - 0.5 * s, 0.2 - 0.1 * s)  # yellow -> orange
+func _advance_tier() -> void:
+	if current_tier < TIERS.size() - 1:
+		_start_tier(current_tier + 1)
 	else:
-		var s: float = (t - 0.66) / 0.34
-		return Color(0.9 - 0.55 * s, 0.4 - 0.25 * s, 0.1 + 0.2 * s)  # orange -> dim
+		# Already at max tier — restart it (infinite replay at hardest)
+		_start_tier(current_tier)
 
 
-func _update_calibration_colors() -> void:
-	var per_pot_colors: Array = []
-
-	for i in range(pot_positions.size()):
-		per_pot_colors.append(_error_to_color(_pot_error(i)))
-
-	# Board color reflects worst-performing dial so player can't ignore any
-	var worst_error := 0
-	for i in range(pot_positions.size()):
-		worst_error = maxi(worst_error, _pot_error(i))
-	var board_color: Color = _error_to_color(worst_error)
-
-	# Apply per-pot color to pot tiles, board color to everything else
-	for y in range(GRID_H):
-		for x in range(GRID_W):
-			var idx := y * GRID_W + x
-			var node = tile_nodes[idx]
-			var is_pot_tile := false
-			for i in range(pot_positions.size()):
-				if pot_positions[i] == Vector2i(x, y):
-					node.calibration_color = per_pot_colors[i]
-					is_pot_tile = true
-					break
-			if not is_pot_tile:
-				node.calibration_color = board_color
-
-
-func _check_calibration_win() -> void:
-	for i in range(pot_positions.size()):
-		if _pot_error(i) > POT_WIN_TOLERANCE:
-			return
-	_play_win_highlight(_on_all_stages_complete)
+func _on_grid_changed() -> void:
+	# Called by grid_manager when decay rotates a tile (or during generate_puzzle).
+	# Guard: tile_nodes may not exist yet during initial generation.
+	if tile_nodes.is_empty():
+		return
+	_refresh_all_tiles()
 
 
 # =========================================================================
@@ -299,9 +220,11 @@ func _play_win_highlight(next_callback: Callable) -> void:
 	_win_tween = create_tween()
 	_win_tween.set_parallel(true)
 	var delay := 0.0
-	for y in range(GRID_H):
-		for x in range(GRID_W):
-			var idx := y * GRID_W + x
+	var gw: int = grid_manager.grid_width
+	var gh: int = grid_manager.grid_height
+	for y in range(gh):
+		for x in range(gw):
+			var idx := y * gw + x
 			if (grid_manager.tiles[idx].connections & 0x0F) == 0:
 				continue
 			var node = tile_nodes[idx]
@@ -315,44 +238,10 @@ func _play_win_highlight(next_callback: Callable) -> void:
 # Helpers
 # =========================================================================
 
-func _mouse_to_grid(global_pos: Vector2) -> Vector2i:
-	var local_pos: Vector2 = global_pos - global_position - GRID_OFFSET
-	var gx: int = int(local_pos.x / CELL_SIZE)
-	var gy: int = int(local_pos.y / CELL_SIZE)
-	if gx < 0 or gx >= GRID_W or gy < 0 or gy >= GRID_H:
-		return Vector2i(-1, -1)
-	if local_pos.x < 0 or local_pos.y < 0:
-		return Vector2i(-1, -1)
-	return Vector2i(gx, gy)
-
-
-func _set_all_draw_mode(mode: int) -> void:
-	for node in tile_nodes:
-		node.draw_mode = mode
-
-
 func _refresh_all_tiles() -> void:
-	for y in range(GRID_H):
-		for x in range(GRID_W):
-			var idx := y * GRID_W + x
+	var gw: int = grid_manager.grid_width
+	var gh: int = grid_manager.grid_height
+	for y in range(gh):
+		for x in range(gw):
+			var idx := y * gw + x
 			tile_nodes[idx].refresh(grid_manager.tiles[idx])
-
-
-func _on_new_game_pressed() -> void:
-	current_stage = Stage.ROTATION
-	is_dragging = false
-	active_pot_index = -1
-	pot_positions.clear()
-	if _win_tween and _win_tween.is_valid():
-		_win_tween.kill()
-		_win_tween = null
-	# Remove old tile nodes
-	for tile_node in tile_nodes:
-		tile_node.queue_free()
-	tile_nodes.clear()
-	# Reset solder/pot state and generate new puzzle
-	grid_manager.generate_puzzle()
-	# Clear solder/pot flags (generate_puzzle creates fresh TileData instances)
-	_set_all_draw_mode(0)  # ROTATION
-	_create_tile_nodes()
-	_refresh_all_tiles()

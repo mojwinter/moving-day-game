@@ -3,8 +3,8 @@
 [ext_resource type="Script" uid="uid://8maatvdmpiiw" path="res://scripts/loopy_puzzle/loopy_puzzle.gd" id="1_puzzle"]
 [ext_resource type="Texture2D" uid="uid://cx28m70mjrxi2" path="res://assets/loopy/loopy_bg.png" id="2_bg"]
 [ext_resource type="Shader" uid="uid://ce6ry8qigv7de" path="res://assets/shaders/bloom.gdshader" id="3_bloom"]
-[ext_resource type="Shader" uid="uid://byv5volrs4r61" path="res://assets/shaders/crt.gdshader" id="4_crt"]
-[ext_resource type="Script" path="res://scripts/loopy_puzzle/puzzle_draw_layer.gd" id="5_puzzle_layer"]
+[ext_resource type="Shader" path="res://assets/shaders/crt.gdshader" id="4_crt"]
+[ext_resource type="Script" uid="uid://cwianbjdmp7sj" path="res://scripts/loopy_puzzle/puzzle_draw_layer.gd" id="5_puzzle_layer"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_bloom"]
 shader = ExtResource("3_bloom")
@@ -16,7 +16,7 @@ shader = ExtResource("4_crt")
 shader_parameter/overlay = true
 shader_parameter/scanlines_opacity = 0.0
 shader_parameter/scanlines_width = 0.0
-shader_parameter/grille_opacity = 0.14000000665
+shader_parameter/grille_opacity = 0.14800000703
 shader_parameter/resolution = Vector2(320, 180)
 shader_parameter/pixelate = false
 shader_parameter/roll = false
@@ -27,7 +27,7 @@ shader_parameter/distort_intensity = 0.0
 shader_parameter/noise_opacity = 0.0
 shader_parameter/noise_speed = 5.0
 shader_parameter/static_noise_intensity = 0.0
-shader_parameter/aberration = 0.006000047784999962
+shader_parameter/aberration = 0.00600004778499996
 shader_parameter/brightness = 1.4
 shader_parameter/discolor = true
 shader_parameter/warp_amount = 1.0
