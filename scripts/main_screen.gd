@@ -19,6 +19,7 @@ func _ready() -> void:
 func _on_couch_interacted() -> void:
 	_player.can_move = false
 	_tv.set_process(false)
+	_couch_interaction.active = false
 	_tv_selector.open()
 
 
@@ -33,6 +34,7 @@ func _on_transition_finished() -> void:
 func _on_selector_closed() -> void:
 	_player.can_move = true
 	_tv.set_process(true)
+	_couch_interaction.active = true
 
 
 func _on_puzzle_exited() -> void:

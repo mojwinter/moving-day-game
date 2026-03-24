@@ -21,7 +21,6 @@ var _current_index := 0
 var _tweening := false
 var _expanding := false
 var _button_focused := 0  # 0 = Play, 1 = Custom
-var _accept_input_after := 0.0
 
 @onready var _cards: Array[Control] = []
 @onready var _card_container: Control = $ViewportContainer/SubViewport/CardContainer
@@ -74,7 +73,6 @@ func open() -> void:
 	_update_dots()
 	_update_buttons()
 	visible = true
-	_accept_input_after = Time.get_ticks_msec() + 200.0
 	_play_power_on()
 
 
@@ -124,8 +122,6 @@ func _play_power_on() -> void:
 
 func _input(event: InputEvent) -> void:
 	if not visible or _expanding:
-		return
-	if Time.get_ticks_msec() < _accept_input_after:
 		return
 
 	if event.is_action_pressed("ui_left"):

@@ -30,8 +30,10 @@ func _on_body_exited(body: Node2D) -> void:
 		_stop_bounce()
 
 
+var active := true
+
 func _input(event: InputEvent) -> void:
-	if _player_inside and event.is_action_pressed("interact"):
+	if active and _player_inside and event.is_action_pressed("interact"):
 		interacted.emit()
 		get_viewport().set_input_as_handled()
 
