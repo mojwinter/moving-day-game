@@ -20,6 +20,7 @@ var source_pos: Vector2i = Vector2i.ZERO
 var _solved := false
 
 var _decay_timer: float = 0.0
+var decay_grace_ticks: int = 3  ## Ticks of immunity after a tile loses power
 
 
 func _ready() -> void:
@@ -36,13 +37,14 @@ func _process(delta: float) -> void:
 
 
 ## Configure and generate a new puzzle with the given parameters.
-func setup_and_generate(w: int, h: int, p_wrapping: bool, p_fog: bool, p_decay: bool, p_decay_interval: float = 5.0) -> void:
+func setup_and_generate(w: int, h: int, p_wrapping: bool, p_fog: bool, p_decay: bool, p_decay_interval: float = 5.0, p_decay_grace: int = 3) -> void:
 	grid_width = w
 	grid_height = h
 	wrapping = p_wrapping
 	fog_enabled = p_fog
 	decay_enabled = p_decay
 	decay_interval = p_decay_interval
+	decay_grace_ticks = p_decay_grace
 	generate_puzzle()
 
 
@@ -226,6 +228,9 @@ func _apply_decay() -> void:
 	var any_rotated := false
 	for i in range(tiles.size()):
 		if not tiles[i].is_active and not tiles[i].is_source and tiles[i].connection_count() >= 1:
+			if tiles[i].decay_grace > 0:
+				tiles[i].decay_grace -= 1
+				continue
 			if randf() < DECAY_CHANCE:
 				tiles[i].rotate_cw()
 				any_rotated = true
@@ -241,7 +246,11 @@ func _apply_decay() -> void:
 # ---------------------------------------------------------------------------
 
 func _update_active() -> void:
+	# Remember which tiles were active before BFS so we can grant grace on deactivation
+	var was_active := []
+	was_active.resize(tiles.size())
 	for i in range(tiles.size()):
+		was_active[i] = tiles[i].is_active
 		tiles[i].is_active = false
 		tiles[i].bfs_distance = -1
 
@@ -269,6 +278,14 @@ func _update_active() -> void:
 			tiles[nidx].is_active = true
 			tiles[nidx].bfs_distance = tiles[idx].bfs_distance + 1
 			queue.append(neighbor_pos)
+
+	# Grant decay grace to tiles that just lost power
+	if decay_enabled:
+		for i in range(tiles.size()):
+			if was_active[i] and not tiles[i].is_active:
+				tiles[i].decay_grace = decay_grace_ticks
+			elif tiles[i].is_active:
+				tiles[i].decay_grace = 0
 
 
 # ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=4 uid="uid://dyj8jjnp3o1nk"]
+[gd_scene load_steps=19 format=4 uid="uid://dyj8jjnp3o1nk"]
 
 [ext_resource type="PackedScene" uid="uid://dsv71f8irrkhh" path="res://scenes/object_layers.tscn" id="3_7a4el"]
 [ext_resource type="PackedScene" uid="uid://dw3rs8dwntwem" path="res://scenes/player.tscn" id="4_kwhh3"]
@@ -7,6 +7,9 @@
 [ext_resource type="Script" uid="uid://b0jtxypahpjvk" path="res://scripts/tv_animation.gd" id="tv_script"]
 [ext_resource type="Texture2D" uid="uid://fhcau3kfx5m1" path="res://assets/interior full/basics/wallpapers.png" id="wallpapers"]
 [ext_resource type="PackedScene" path="res://scenes/puzzle_switcher.tscn" id="puzzle_switcher"]
+[ext_resource type="Script" path="res://scripts/main_screen.gd" id="main_screen_script"]
+[ext_resource type="Script" path="res://scripts/couch_interaction.gd" id="couch_interaction_script"]
+[ext_resource type="PackedScene" path="res://scenes/tv_selector/tv_selector.tscn" id="tv_selector"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_0"]
 texture = ExtResource("tables")
@@ -528,7 +531,11 @@ fill = 1
 fill_from = Vector2(0.5, 0.5)
 fill_to = Vector2(0.5, 0)
 
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_couch"]
+size = Vector2(36, 14)
+
 [node name="main_screen" type="Node2D"]
+script = ExtResource("main_screen_script")
 
 [node name="TileMap" type="Node2D" parent="."]
 
@@ -584,5 +591,26 @@ texture_scale = 1.2
 [node name="Player" parent="." instance=ExtResource("4_kwhh3")]
 position = Vector2(144, 97)
 
+[node name="CouchInteraction" type="Area2D" parent="."]
+position = Vector2(200, 106)
+script = ExtResource("couch_interaction_script")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CouchInteraction"]
+shape = SubResource("RectangleShape2D_couch")
+
+[node name="Prompt" type="Label" parent="CouchInteraction"]
+offset_left = -6.0
+offset_top = -22.0
+offset_right = 6.0
+offset_bottom = -12.0
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "E"
+
 [node name="PuzzleSwitcher" parent="." instance=ExtResource("puzzle_switcher")]
 z_index = 10
+
+[node name="TvSelectorLayer" type="CanvasLayer" parent="."]
+layer = 100
+
+[node name="TvSelector" parent="TvSelectorLayer" instance=ExtResource("tv_selector")]

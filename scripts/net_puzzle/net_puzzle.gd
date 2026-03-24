@@ -12,13 +12,13 @@ const TileScene := preload("res://scenes/net_puzzle/tile.tscn")
 ## Tier definitions: each tier adds a new mechanic on top of previous ones.
 ## { w, h, wrapping, fog, decay, decay_interval }
 const TIERS := [
-	{ "w": 3, "h": 3, "wrapping": false, "fog": false, "decay": false, "decay_interval": 0.0 },
-	{ "w": 4, "h": 4, "wrapping": false, "fog": false, "decay": false, "decay_interval": 0.0 },
-	{ "w": 5, "h": 5, "wrapping": false, "fog": false, "decay": false, "decay_interval": 0.0 },
-	{ "w": 6, "h": 6, "wrapping": false, "fog": true,  "decay": false, "decay_interval": 0.0 },
-	{ "w": 7, "h": 7, "wrapping": false, "fog": true,  "decay": false, "decay_interval": 0.0 },
-	{ "w": 8, "h": 8, "wrapping": false, "fog": false, "decay": true,  "decay_interval": 2.0 },
-	{ "w": 9, "h": 9, "wrapping": false, "fog": true,  "decay": true,  "decay_interval": 2.0 },
+	{ "w": 3, "h": 3, "wrapping": false, "fog": false, "decay": false, "decay_interval": 0.0, "decay_grace": 3 },
+	{ "w": 4, "h": 4, "wrapping": false, "fog": false, "decay": false, "decay_interval": 0.0, "decay_grace": 3 },
+	{ "w": 5, "h": 5, "wrapping": false, "fog": false, "decay": false, "decay_interval": 0.0, "decay_grace": 3 },
+	{ "w": 6, "h": 6, "wrapping": false, "fog": true,  "decay": false, "decay_interval": 0.0, "decay_grace": 3 },
+	{ "w": 7, "h": 7, "wrapping": false, "fog": true,  "decay": false, "decay_interval": 0.0, "decay_grace": 3 },
+	{ "w": 8, "h": 8, "wrapping": false, "fog": false, "decay": true,  "decay_interval": 2.0, "decay_grace": 3 },
+	{ "w": 9, "h": 9, "wrapping": false, "fog": true,  "decay": true,  "decay_interval": 2.0, "decay_grace": 2 },
 ]
 
 var current_tier: int = 0
@@ -83,7 +83,7 @@ func _start_tier(tier: int) -> void:
 	grid_manager.setup_and_generate(
 		t["w"], t["h"],
 		t["wrapping"],
-		t["fog"], t["decay"], t["decay_interval"]
+		t["fog"], t["decay"], t["decay_interval"], t["decay_grace"]
 	)
 	_create_tile_nodes()
 	_refresh_all_tiles()

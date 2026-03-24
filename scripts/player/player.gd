@@ -4,6 +4,7 @@ const SPEED := 60.0
 
 var direction := "down"
 var is_moving := false
+var can_move := true
 
 @onready var sprite_layers: Array[AnimatedSprite2D] = [
 	$Body,
@@ -13,7 +14,20 @@ var is_moving := false
 ]
 
 
+func _ready() -> void:
+	add_to_group("player")
+
+
 func _physics_process(_delta: float) -> void:
+	if not can_move:
+		velocity = Vector2.ZERO
+		is_moving = false
+		var anim := "idle_" + direction
+		for sprite in sprite_layers:
+			if sprite and sprite.animation != anim:
+				sprite.play(anim)
+		return
+
 	var input := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
 
 	if input != Vector2.ZERO:

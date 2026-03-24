@@ -1,0 +1,48 @@
+[gd_scene load_steps=5 format=3 uid="uid://s7mvdi0667dq"]
+
+[ext_resource type="Script" uid="uid://c01f4i0h5axfr" path="res://scripts/tv_selector/puzzle_card.gd" id="1_card"]
+[ext_resource type="Shader" uid="uid://cad60jb4nk2cx" path="res://assets/shaders/presaturate.gdshader" id="2_presat"]
+[ext_resource type="FontFile" uid="uid://c2fontm3x6" path="res://assets/fonts/m3x6.ttf" id="3_font"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_presat"]
+shader = ExtResource("2_presat")
+shader_parameter/saturation_boost = 1.8
+
+[node name="PuzzleCard" type="Control"]
+custom_minimum_size = Vector2(240, 110)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 240.0
+offset_bottom = 110.0
+script = ExtResource("1_card")
+
+[node name="CardBG" type="ColorRect" parent="."]
+layout_mode = 0
+offset_right = 240.0
+offset_bottom = 110.0
+color = Color(0.08, 0.08, 0.12, 1)
+
+[node name="PreviewColor" type="ColorRect" parent="CardBG"]
+layout_mode = 0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 236.0
+offset_bottom = 85.0
+color = Color(0.15, 0.2, 0.3, 1)
+
+[node name="PreviewImage" type="TextureRect" parent="CardBG"]
+material = SubResource("ShaderMaterial_presat")
+layout_mode = 0
+offset_right = 240.0
+offset_bottom = 110.0
+
+[node name="TitleLabel" type="Label" parent="CardBG"]
+layout_mode = 0
+offset_top = 85.0
+offset_right = 240.0
+offset_bottom = 110.0
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 24
+text = "PUZZLE"
+horizontal_alignment = 1
+vertical_alignment = 1
