@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=4 uid="uid://dyj8jjnp3o1nk"]
+[gd_scene load_steps=20 format=4 uid="uid://dyj8jjnp3o1nk"]
 
 [ext_resource type="PackedScene" uid="uid://dsv71f8irrkhh" path="res://scenes/object_layers.tscn" id="3_7a4el"]
 [ext_resource type="PackedScene" uid="uid://dw3rs8dwntwem" path="res://scenes/player.tscn" id="4_kwhh3"]
@@ -10,6 +10,7 @@
 [ext_resource type="Script" path="res://scripts/main_screen.gd" id="main_screen_script"]
 [ext_resource type="Script" path="res://scripts/couch_interaction.gd" id="couch_interaction_script"]
 [ext_resource type="PackedScene" path="res://scenes/tv_selector/tv_selector.tscn" id="tv_selector"]
+[ext_resource type="FontFile" uid="uid://c2fontm3x6" path="res://assets/fonts/m3x6.ttf" id="m3x6_font"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_0"]
 texture = ExtResource("tables")
@@ -603,6 +604,8 @@ offset_left = -6.0
 offset_top = -22.0
 offset_right = 6.0
 offset_bottom = -12.0
+theme_override_fonts/font = ExtResource("m3x6_font")
+theme_override_font_sizes/font_size = 16
 horizontal_alignment = 1
 vertical_alignment = 1
 text = "E"

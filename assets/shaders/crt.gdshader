@@ -47,6 +47,11 @@ uniform bool clip_warp = false;
 uniform float vignette_intensity = 0.4;
 uniform float vignette_opacity : hint_range(0.0, 1.0) = 0.5;
 
+uniform float static_mix : hint_range(0.0, 1.0) = 0.0;
+uniform float static_opacity : hint_range(0.0, 1.0) = 1.0;
+uniform float scanline_wipe : hint_range(-0.1, 1.1) = -0.1;
+uniform float scanline_wipe_width : hint_range(0.01, 0.2) = 0.05;
+
 vec2 random(vec2 uv){
     uv = vec2( dot(uv, vec2(127.1,311.7) ),
                dot(uv, vec2(269.5,183.3) ) );
@@ -184,6 +189,31 @@ void fragment()
 
 		float midpoint = pow(0.5, 2.2);
 		text.rgb = (text.rgb - vec3(midpoint)) * contrast + midpoint;
+	}
+
+	if (static_mix > 0.0)
+	{
+		vec2 static_uv = ceil(uv * resolution) / resolution;
+		// Per-pixel random threshold (stable per pixel, independent of time)
+		float pixel_threshold = fract(sin(dot(static_uv, vec2(127.1, 311.7))) * 43758.5453);
+		// Animated noise that changes every frame
+		float s = fract(sin(dot(static_uv + fract(TIME * 43.0), vec2(12.9898, 78.233))) * 43758.5453);
+		vec3 static_col = vec3(s);
+		// Pixel shows static when static_mix is above its threshold, real image otherwise
+		// Smoothstep gives a soft transition band per pixel
+		float pixel_static = smoothstep(pixel_threshold - 0.05, pixel_threshold + 0.05, static_mix);
+		text.rgb = mix(text.rgb, static_col, pixel_static * static_opacity);
+	}
+
+	if (scanline_wipe > -0.05)
+	{
+		// Bright scanline bar sweeping down, leaving transparency behind
+		float wipe_y = overlay ? SCREEN_UV.y : UV.y;
+		float bar = 1.0 - smoothstep(0.0, scanline_wipe_width, abs(wipe_y - scanline_wipe));
+		text.rgb += vec3(bar * 0.8); // bright white scanline bar
+		// Everything above the wipe becomes transparent (reveals scene behind)
+		float above = smoothstep(scanline_wipe - scanline_wipe_width, scanline_wipe, wipe_y);
+		text.a *= above;
 	}
 
 	COLOR = text;

@@ -11,6 +11,7 @@ extends Node2D
 func _ready() -> void:
 	_couch_interaction.interacted.connect(_on_couch_interacted)
 	_tv_selector.play_pressed.connect(_on_play_pressed)
+	_tv_selector.transition_finished.connect(_on_transition_finished)
 	_tv_selector.closed.connect(_on_selector_closed)
 	_puzzle_switcher.puzzle_exited.connect(_on_puzzle_exited)
 
@@ -22,8 +23,11 @@ func _on_couch_interacted() -> void:
 
 
 func _on_play_pressed(scene_path: String) -> void:
-	_tv_selector.visible = false
 	_puzzle_switcher.launch_puzzle(scene_path)
+
+
+func _on_transition_finished() -> void:
+	_tv_selector.visible = false
 
 
 func _on_selector_closed() -> void:

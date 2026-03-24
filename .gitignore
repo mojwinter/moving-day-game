@@ -25,3 +25,5 @@ bin/linux/
 bin/macos/
 godot-cpp/bin/
 
+.vscode
+
