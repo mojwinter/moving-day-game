@@ -43,15 +43,25 @@ const HIGHLIGHT_COLOR := Color(0.95, 0.85, 0.3)
 const SOURCE_COLOR := Color(1.0, 1.0, 1.0)
 
 const ROTATE_TIME := 0.15  ## Seconds for rotation animation
+const FOG_REVEAL_TIME := 0.35  ## Seconds for fog fade-in/out
+const FOG_HIDE_TIME := 0.25    ## Slightly faster re-fog
 
 var highlight: float = 0.0:
 	set(v):
 		highlight = v
 		queue_redraw()
 
+## Fog alpha: 1.0 = fully fogged, 0.0 = fully revealed
+var fog_alpha: float = 1.0:
+	set(v):
+		fog_alpha = v
+		queue_redraw()
+
 var grid_x: int = 0
 var grid_y: int = 0
 var tile_data = null
+var _was_revealed: bool = false  ## Track previous reveal state for transitions
+var _fog_tween: Tween = null
 
 ## Rotation animation state
 var _anim_angle: float = 0.0      ## Current extra rotation in degrees (0 to 90)
@@ -73,9 +83,47 @@ func setup(x: int, y: int, p_cell_size: float = 16.0) -> void:
 			shape_owner.position = center
 
 
-func refresh(data) -> void:
+func refresh(data, reveal_delay: float = 0.0) -> void:
 	tile_data = data
+	_update_fog_visual(reveal_delay)
 	queue_redraw()
+
+
+## Animate fog transitions when reveal state changes.
+func _update_fog_visual(reveal_delay: float) -> void:
+	if tile_data == null:
+		return
+
+	var is_now_revealed: bool = tile_data.is_revealed
+
+	if is_now_revealed == _was_revealed:
+		return  # No change
+
+	_was_revealed = is_now_revealed
+
+	# Kill any existing fog tween
+	if _fog_tween and _fog_tween.is_valid():
+		_fog_tween.kill()
+
+	_fog_tween = create_tween()
+
+	if is_now_revealed:
+		# Revealing: fade fog out with optional stagger delay
+		if reveal_delay > 0.0:
+			_fog_tween.tween_interval(reveal_delay)
+		_fog_tween.tween_property(self, "fog_alpha", 0.0, FOG_REVEAL_TIME).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	else:
+		# Hiding: fade fog back in
+		_fog_tween.tween_property(self, "fog_alpha", 1.0, FOG_HIDE_TIME).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+
+
+## Reset fog state instantly (used when starting a new tier).
+func reset_fog(revealed: bool) -> void:
+	_was_revealed = revealed
+	fog_alpha = 0.0 if revealed else 1.0
+	if _fog_tween and _fog_tween.is_valid():
+		_fog_tween.kill()
+		_fog_tween = null
 
 
 ## Call this BEFORE rotating the bitmask to kick off the animation.
@@ -102,8 +150,8 @@ func _draw() -> void:
 		draw_rect(Rect2(0, 0, cell_size, cell_size), BG_COLOR)
 		return
 
-	# Fog of war: hidden tiles show as dark squares
-	if not tile_data.is_revealed:
+	# Fully fogged — just draw fog rectangle
+	if fog_alpha >= 1.0:
 		draw_rect(Rect2(0, 0, cell_size, cell_size), FOG_COLOR)
 		return
 
@@ -128,6 +176,10 @@ func _draw() -> void:
 		extra_angle = 0.0
 
 	if conns == 0:
+		# Overlay fog on top if partially fogged
+		if fog_alpha > 0.0:
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+			draw_rect(Rect2(0, 0, cell_size, cell_size), Color(FOG_COLOR, fog_alpha))
 		return
 
 	var half := SPRITE_SIZE / 2.0
@@ -155,7 +207,11 @@ func _draw() -> void:
 			var src_tint := Color.WHITE.lerp(HIGHLIGHT_COLOR, highlight) if highlight > 0.0 else Color.WHITE
 			draw_set_transform(center, deg_to_rad(src_angle), Vector2.ONE)
 			draw_texture_rect_region(PIPE_SHEET, Rect2(-half, -half, SPRITE_SIZE, SPRITE_SIZE), src_src, src_tint)
-			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+	# Overlay fog on top if partially fogged (smooth transition)
+	if fog_alpha > 0.0:
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		draw_rect(Rect2(0, 0, cell_size, cell_size), Color(FOG_COLOR, fog_alpha))
 
 
 func _on_click_area_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:

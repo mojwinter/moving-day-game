@@ -6,6 +6,7 @@ var connections: int = 0
 var is_source: bool = false
 var is_active: bool = false
 var is_revealed: bool = false  ## Fog of war: tile content visible to player
+var bfs_distance: int = -1     ## BFS hops from source (-1 = unreached)
 
 
 ## Clockwise rotation: R->D->L->U->R

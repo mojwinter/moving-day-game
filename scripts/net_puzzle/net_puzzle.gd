@@ -3,12 +3,9 @@ extends Node2D
 ## Manages progressive tiers with escalating grid sizes and mechanics.
 
 const SCREEN_SIZE := Vector2(320, 180)
-const HUD_HEIGHT := 16.0  ## Space reserved at top for tier info + new button
 var grid_offset := Vector2.ZERO  ## Computed per tier to center the grid
-const NEW_BTN_RECT := Rect2(2, 2, 24, 12)
 
 const TileScene := preload("res://scenes/net_puzzle/tile.tscn")
-const PIXEL_FONT := preload("res://assets/fonts/m3x6.ttf")
 
 @onready var grid_manager = $GridManager
 
@@ -30,11 +27,20 @@ var cell_size: float = 20.0
 var _win_tween: Tween = null
 var _frame_texture: Texture2D = null
 var _frame_pos: Vector2 = Vector2.ZERO
+var _flash_rect: ColorRect = null  ## Screen flash overlay
 
 
 func _ready() -> void:
 	grid_manager.puzzle_solved.connect(_on_puzzle_solved)
 	grid_manager.grid_changed.connect(_on_grid_changed)
+	# Create flash overlay on a high z-index so it draws above tiles
+	_flash_rect = ColorRect.new()
+	_flash_rect.color = Color(1.0, 1.0, 1.0, 0.0)
+	_flash_rect.size = SCREEN_SIZE
+	_flash_rect.position = -global_position
+	_flash_rect.z_index = 100
+	_flash_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_flash_rect)
 	_start_tier(0)
 
 
@@ -95,6 +101,9 @@ func _create_tile_nodes() -> void:
 			tile_node.tile_clicked.connect(_on_tile_clicked)
 			add_child(tile_node)
 			tile_nodes.append(tile_node)
+			# Set initial fog state instantly (no animation on tier start)
+			var idx := y * gw + x
+			tile_node.reset_fog(grid_manager.tiles[idx].is_revealed)
 
 
 # =========================================================================
@@ -105,36 +114,6 @@ func _draw() -> void:
 	# Frame behind the grid
 	if _frame_texture:
 		draw_texture(_frame_texture, _frame_pos)
-
-	var font_size := 16
-
-	# "New" button
-	draw_rect(NEW_BTN_RECT, Color(0.25, 0.23, 0.2))
-	draw_rect(NEW_BTN_RECT, Color(0.4, 0.38, 0.35), false)
-	var txt := "New"
-	var ts := PIXEL_FONT.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
-	var ascent := PIXEL_FONT.get_ascent(font_size)
-	var descent := PIXEL_FONT.get_descent(font_size)
-	var text_h := ascent + descent
-	var tx := NEW_BTN_RECT.position.x + (NEW_BTN_RECT.size.x - ts.x) / 2.0
-	var ty := NEW_BTN_RECT.position.y + (NEW_BTN_RECT.size.y - text_h) / 2.0 + ascent
-	draw_string(PIXEL_FONT, Vector2(tx, ty), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0.8, 0.8, 0.7))
-
-	# Tier indicator
-	var tier_txt := "Tier " + str(current_tier + 1)
-	var t: Dictionary = TIERS[current_tier]
-	var size_txt := str(t["w"]) + "x" + str(t["h"])
-	var info_parts := [size_txt]
-	if t["fog"]:
-		info_parts.append("fog")
-	if t["wrapping"]:
-		info_parts.append("wrap")
-	if t["decay"]:
-		info_parts.append("decay")
-	var info_txt := " ".join(info_parts)
-
-	draw_string(PIXEL_FONT, Vector2(32, ascent + 2), tier_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0.9, 0.85, 0.5))
-	draw_string(PIXEL_FONT, Vector2(32, ascent + 2 + text_h), info_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0.55, 0.55, 0.5))
 
 
 # =========================================================================
@@ -172,12 +151,6 @@ func _finish_rotate_anim() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var local: Vector2 = event.global_position - global_position
-		if NEW_BTN_RECT.has_point(local):
-			_start_tier(current_tier)
-			get_viewport().set_input_as_handled()
-
 	# Debug: N = next tier, P = previous tier
 	if OS.is_debug_build() and event is InputEventKey and event.pressed:
 		if event.keycode == KEY_N:
@@ -211,32 +184,68 @@ func _on_grid_changed() -> void:
 
 
 # =========================================================================
-# Win animation
+# Win animation — soft BFS ripple
 # =========================================================================
+
+const WIN_FLASH_ALPHA := 0.03       ## Very subtle white flash
+const WIN_FLASH_FADE := 0.6         ## Slow flash fade-out
+const WIN_RIPPLE_DELAY := 0.06      ## Stagger per BFS hop (slower wave)
+const WIN_RISE_TIME := 0.3          ## Time to ease highlight up to peak
+const WIN_HOLD_TIME := 0.15         ## Brief hold at peak
+const WIN_FADE_TIME := 0.5          ## Time to ease highlight back down
+const WIN_PEAK := 0.7               ## Peak highlight intensity (not full)
 
 func _play_win_highlight(next_callback: Callable) -> void:
 	if _win_tween and _win_tween.is_valid():
 		_win_tween.kill()
-	_win_tween = create_tween()
-	_win_tween.set_parallel(true)
-	var delay := 0.0
+
 	var gw: int = grid_manager.grid_width
 	var gh: int = grid_manager.grid_height
+
+	# — Subtle screen flash —
+	_flash_rect.color = Color(1.0, 1.0, 1.0, WIN_FLASH_ALPHA)
+
+	_win_tween = create_tween()
+	_win_tween.set_parallel(true)
+
+	# Flash fade-out
+	_win_tween.tween_property(_flash_rect, "color:a", 0.0, WIN_FLASH_FADE).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+	# — BFS-distance ripple: gentle rise → hold → fade per tile —
+	var max_dist := 0
+	for y in range(gh):
+		for x in range(gw):
+			var idx := y * gw + x
+			var d: int = grid_manager.tiles[idx].bfs_distance
+			if d > max_dist:
+				max_dist = d
+
 	for y in range(gh):
 		for x in range(gw):
 			var idx := y * gw + x
 			if (grid_manager.tiles[idx].connections & 0x0F) == 0:
 				continue
 			var node = tile_nodes[idx]
-			node.highlight = 1.0
-			_win_tween.tween_property(node, "highlight", 0.0, 0.6).set_delay(delay).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-			delay += 0.03
+			var dist: int = grid_manager.tiles[idx].bfs_distance
+			if dist < 0:
+				dist = max_dist + 1
+			var delay: float = dist * WIN_RIPPLE_DELAY
+
+			# Rise gently to peak
+			_win_tween.tween_property(node, "highlight", WIN_PEAK, WIN_RISE_TIME).set_delay(delay).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+			# Hold briefly, then fade back down
+			_win_tween.tween_property(node, "highlight", 0.0, WIN_FADE_TIME).set_delay(delay + WIN_RISE_TIME + WIN_HOLD_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
 	_win_tween.finished.connect(next_callback)
+
 
 
 # =========================================================================
 # Helpers
 # =========================================================================
+
+## Per-tile stagger delay for fog reveal based on BFS distance from source.
+const FOG_STAGGER_DELAY := 0.04  ## Seconds per BFS hop
 
 func _refresh_all_tiles() -> void:
 	var gw: int = grid_manager.grid_width
@@ -244,4 +253,8 @@ func _refresh_all_tiles() -> void:
 	for y in range(gh):
 		for x in range(gw):
 			var idx := y * gw + x
-			tile_nodes[idx].refresh(grid_manager.tiles[idx])
+			var td = grid_manager.tiles[idx]
+			var delay := 0.0
+			if grid_manager.fog_enabled and td.bfs_distance >= 0:
+				delay = td.bfs_distance * FOG_STAGGER_DELAY
+			tile_nodes[idx].refresh(td, delay)

@@ -206,7 +206,11 @@ func _update_fog() -> void:
 				for dir in NC.DIRECTIONS:
 					var npos := _neighbor_pos(Vector2i(x, y), dir)
 					if npos != Vector2i(-1, -1):
-						tiles[npos.y * grid_width + npos.x].is_revealed = true
+						var nidx := npos.y * grid_width + npos.x
+						tiles[nidx].is_revealed = true
+						# Give neighbor tiles a distance if they don't have one from BFS
+						if tiles[nidx].bfs_distance < 0:
+							tiles[nidx].bfs_distance = tiles[idx].bfs_distance + 1
 
 	# Source always revealed
 	tiles[source_pos.y * grid_width + source_pos.x].is_revealed = true
@@ -237,9 +241,11 @@ func _apply_decay() -> void:
 func _update_active() -> void:
 	for i in range(tiles.size()):
 		tiles[i].is_active = false
+		tiles[i].bfs_distance = -1
 
 	var source_idx := source_pos.y * grid_width + source_pos.x
 	tiles[source_idx].is_active = true
+	tiles[source_idx].bfs_distance = 0
 	var queue := [source_pos]
 
 	while queue.size() > 0:
@@ -259,6 +265,7 @@ func _update_active() -> void:
 			if tiles[nidx].is_active:
 				continue
 			tiles[nidx].is_active = true
+			tiles[nidx].bfs_distance = tiles[idx].bfs_distance + 1
 			queue.append(neighbor_pos)
 
 
