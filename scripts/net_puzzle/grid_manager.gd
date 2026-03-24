@@ -13,7 +13,7 @@ var grid_height: int = 3
 var wrapping: bool = false
 var fog_enabled: bool = false
 var decay_enabled: bool = false
-var decay_interval: float = 5.0  ## Seconds between random decay rotations
+var decay_interval: float = 2.0  ## Seconds between decay ticks
 
 var tiles: Array = []
 var source_pos: Vector2i = Vector2i.ZERO
@@ -217,18 +217,20 @@ func _update_fog() -> void:
 
 
 # ---------------------------------------------------------------------------
-# Decay — randomly rotate an unpowered tile
+# Decay — each unpowered tile has a % chance of rotating per tick
 # ---------------------------------------------------------------------------
 
+const DECAY_CHANCE := 0.12  ## 12% chance per unpowered tile per tick
+
 func _apply_decay() -> void:
-	var candidates := []
+	var any_rotated := false
 	for i in range(tiles.size()):
 		if not tiles[i].is_active and not tiles[i].is_source and tiles[i].connection_count() >= 1:
-			candidates.append(i)
-	if candidates.is_empty():
+			if randf() < DECAY_CHANCE:
+				tiles[i].rotate_cw()
+				any_rotated = true
+	if not any_rotated:
 		return
-	var idx: int = candidates[randi() % candidates.size()]
-	tiles[idx].rotate_cw()
 	_update_active()
 	_update_fog()
 	grid_changed.emit()

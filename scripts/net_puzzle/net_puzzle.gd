@@ -17,8 +17,8 @@ const TIERS := [
 	{ "w": 5, "h": 5, "wrapping": false, "fog": false, "decay": false, "decay_interval": 0.0 },
 	{ "w": 6, "h": 6, "wrapping": false, "fog": true,  "decay": false, "decay_interval": 0.0 },
 	{ "w": 7, "h": 7, "wrapping": false, "fog": true,  "decay": false, "decay_interval": 0.0 },
-	{ "w": 8, "h": 8, "wrapping": false, "fog": false, "decay": true,  "decay_interval": 5.0 },
-	{ "w": 9, "h": 9, "wrapping": false, "fog": true,  "decay": true,  "decay_interval": 5.0 },
+	{ "w": 8, "h": 8, "wrapping": false, "fog": false, "decay": true,  "decay_interval": 2.0 },
+	{ "w": 9, "h": 9, "wrapping": false, "fog": true,  "decay": true,  "decay_interval": 2.0 },
 ]
 
 var current_tier: int = 0
