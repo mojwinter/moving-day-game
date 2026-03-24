@@ -26,6 +26,7 @@ var exit_edge: int = -1          # which border the track exits from
 var exit_pos: int = -1           # position along that border
 var completed: bool = false
 var impossible: bool = false
+var _fallback: bool = false
 
 # DSF arrays (reused across solver calls)
 var _dsf: Array = []
@@ -65,8 +66,17 @@ func generate_puzzle_from(ent_edge: int, ent_pos: int, diff: int = DIFF_EASY) ->
 		check_completion(true)
 		grid_changed.emit()
 		return
-	# Fallback: should rarely get here
-	push_warning("TracksPuzzle: failed to generate after %d attempts" % max_attempts)
+	# Fallback: retry with DIFF_EASY and relaxed entrance
+	push_warning("TracksPuzzle: failed after %d attempts (edge=%d pos=%d diff=%d)" % [max_attempts, ent_edge, ent_pos, diff])
+	if diff > DIFF_EASY:
+		generate_puzzle_from(ent_edge, ent_pos, DIFF_EASY)
+		return
+	if not _fallback:
+		_fallback = true
+		generate_puzzle(DIFF_EASY)
+		_fallback = false
+		return
+	push_error("TracksPuzzle: generation completely failed")
 	grid_changed.emit()
 
 

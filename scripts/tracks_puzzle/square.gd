@@ -3,7 +3,17 @@ extends Node2D
 ## Draws track pieces, no-track marks, and error indicators via _draw().
 
 const TC := preload("res://scripts/tracks_puzzle/tracks_consts.gd")
-var STRAIGHT_TEX: Texture2D = load("res://assets/tracks/straight_track3.png")
+var TRACKS_TEX: Texture2D = load("res://assets/tracks/tracks.png")
+const FRAME_SIZE := 32
+# Sprite-sheet frame index for each 2-direction track shape
+const TRACK_FRAME := {
+	5:  0,  # LR  – horizontal
+	10: 1,  # UD  – vertical
+	12: 2,  # LD  – west-south curve
+	6:  3,  # LU  – west-north curve
+	3:  4,  # RU  – north-east curve
+	9:  5,  # RD  – south-east curve
+}
 
 signal square_clicked(grid_x: int, grid_y: int, local_pos: Vector2)
 signal square_right_clicked(grid_x: int, grid_y: int, local_pos: Vector2)
@@ -11,9 +21,9 @@ signal square_right_clicked(grid_x: int, grid_y: int, local_pos: Vector2)
 const CELL_SIZE := 28.0
 const CENTER := Vector2(CELL_SIZE / 2.0, CELL_SIZE / 2.0)
 
-# Rail positions: inner rail at ~30% from edge, outer rail at ~70%
-const RAIL_IN := 8.0
-const RAIL_OUT := 20.0
+# Rail positions for stubs (scaled for 28px cell)
+const RAIL_IN := 9.0
+const RAIL_OUT := 19.0
 
 # Colors
 const BG_COLOR := Color(0.18, 0.16, 0.14)
@@ -116,15 +126,8 @@ func _draw() -> void:
 
 
 func _draw_track_shape(flags: int, col: Color) -> void:
-	# Check for standard 2-direction shapes first
-	if flags == TC.LR:
-		_draw_straight_h(col)
-		return
-	if flags == TC.UD:
-		_draw_straight_v(col)
-		return
-	if flags == TC.LU or flags == TC.LD or flags == TC.RU or flags == TC.RD:
-		_draw_curve(flags, col)
+	if TRACK_FRAME.has(flags):
+		_draw_track_sprite(TRACK_FRAME[flags], col)
 		return
 	# Fallback: draw individual edge stubs
 	for i in range(4):
@@ -133,48 +136,9 @@ func _draw_track_shape(flags: int, col: Color) -> void:
 			_draw_stub(d, col)
 
 
-func _draw_straight_h(col: Color) -> void:
-	# Rotate the vertical sprite 90° around the center
-	draw_set_transform(CENTER, PI * 0.5, Vector2.ONE)
-	draw_texture(STRAIGHT_TEX, -CENTER, col)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-
-
-func _draw_straight_v(col: Color) -> void:
-	draw_texture(STRAIGHT_TEX, Vector2.ZERO, col)
-
-
-func _draw_curve(flags: int, col: Color) -> void:
-	# Arc center is at the corner toward both connected edges
-	var cx := 0.0 if (flags & TC.DIR_L) else CELL_SIZE
-	var cy := 0.0 if (flags & TC.DIR_U) else CELL_SIZE
-	var arc_center := Vector2(cx, cy)
-
-	# Determine arc angle range
-	var start_angle := 0.0
-	if flags == TC.RD:      # corner at bottom-right, arc from 180 to 270
-		start_angle = PI
-	elif flags == TC.LD:    # corner at bottom-left, arc from 270 to 360
-		start_angle = PI * 1.5
-	elif flags == TC.LU:    # corner at top-left, arc from 0 to 90
-		start_angle = 0.0
-	elif flags == TC.RU:    # corner at top-right, arc from 90 to 180
-		start_angle = PI * 0.5
-
-	var end_angle := start_angle + PI * 0.5
-
-	# Draw sleepers (radial lines)
-	var nsleepers := 5
-	for i in range(nsleepers):
-		var th := start_angle + (end_angle - start_angle) * (float(i) + 0.5) / float(nsleepers)
-		var dir := Vector2(cos(th), sin(th))
-		var inner_pt := arc_center + dir * float(RAIL_IN)
-		var outer_pt := arc_center + dir * float(RAIL_OUT)
-		draw_line(inner_pt, outer_pt, SLEEPER_COLOR, 1.0)
-
-	# Draw inner and outer arcs
-	draw_arc(arc_center, RAIL_IN, start_angle, end_angle, 16, col, 1.0)
-	draw_arc(arc_center, RAIL_OUT, start_angle, end_angle, 16, col, 1.0)
+func _draw_track_sprite(frame: int, col: Color) -> void:
+	var src := Rect2(frame * FRAME_SIZE, 0, FRAME_SIZE, FRAME_SIZE)
+	draw_texture_rect_region(TRACKS_TEX, Rect2(0, 0, CELL_SIZE, CELL_SIZE), src, col)
 
 
 func _draw_stub(d: int, col: Color) -> void:

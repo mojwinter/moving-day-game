@@ -4,8 +4,8 @@ extends Node2D
 ## Supports chaining: after solving, new tiles drop in adjacent; camera pans to follow.
 
 const CELL_SIZE := 28
-const GRID_OFFSET := Vector2(62, 6)
-const NEW_BTN_RECT := Rect2(2, 2, 24, 12)
+const GRID_OFFSET := Vector2(48, -6)
+
 
 const SquareScene := preload("res://scenes/tracks_puzzle/square.tscn")
 const PIXEL_FONT := preload("res://assets/fonts/m3x6.ttf")
@@ -75,7 +75,7 @@ func _ready() -> void:
 
 
 func _apply_level(chain_idx: int) -> void:
-	var level_idx := chain_idx % PROGRESSION.size()
+	var level_idx := mini(chain_idx, PROGRESSION.size() - 1)
 	var level: Array = PROGRESSION[level_idx]
 	grid_manager.GRID_W = level[0]
 	grid_manager.GRID_H = level[1]
@@ -101,16 +101,27 @@ func _create_square_nodes(container: Node2D, nodes_array: Array) -> void:
 
 
 func _snapshot_current_labels(origin: Vector2) -> void:
+	var ent: int = grid_manager.entrance_edge
+	# Place clues on sides where no old puzzle overlaps.
+	# Check each candidate side against all existing grid rects.
+	var gw: int = grid_manager.GRID_W
+	var gh: int = grid_manager.GRID_H
+	var col_edge := _pick_free_edge(origin, gw, gh, [TC.EDGE_TOP, TC.EDGE_BOTTOM])
+	var row_edge := _pick_free_edge(origin, gw, gh, [TC.EDGE_RIGHT, TC.EDGE_LEFT])
+
 	_grid_labels.append({
 		"origin": origin,
 		"w": grid_manager.GRID_W,
 		"h": grid_manager.GRID_H,
 		"clues": grid_manager.clue_numbers.duplicate(),
 		"errors": grid_manager.num_errors.duplicate(),
-		"ent_edge": grid_manager.entrance_edge,
+		"ent_edge": ent,
 		"ent_pos": grid_manager.entrance_pos,
 		"ext_edge": grid_manager.exit_edge,
 		"ext_pos": grid_manager.exit_pos,
+		"clue_col_edge": col_edge,
+		"clue_row_edge": row_edge,
+		"alpha": 1.0,
 	})
 
 
@@ -123,8 +134,6 @@ func _draw() -> void:
 	for label_data in _grid_labels:
 		_draw_grid_labels(label_data)
 
-	# "New" button drawn in camera-relative screen space
-	_draw_new_button(16)
 
 
 func _draw_grid_labels(ld: Dictionary) -> void:
@@ -137,47 +146,43 @@ func _draw_grid_labels(ld: Dictionary) -> void:
 	var font_size := 16
 	var vy := 6
 	var base: Vector2 = ld["origin"] + GRID_OFFSET
+	var col_edge: int = ld.get("clue_col_edge", TC.EDGE_TOP)
+	var row_edge: int = ld.get("clue_row_edge", TC.EDGE_RIGHT)
+	var alpha: float = ld.get("alpha", 1.0)
+	if alpha <= 0.0:
+		return
 
-	# Column clues (above grid)
+	# Column clues (top or bottom of grid)
 	for x in range(gw):
 		var num: int = clues[x]
 		var is_err: bool = errors[x] != 0
-		var col := Color(1.0, 0.2, 0.2) if is_err else Color(0.8, 0.8, 0.7)
+		var col := Color(1.0, 0.2, 0.2, alpha) if is_err else Color(0.8, 0.8, 0.7, alpha)
 		var txt := str(num)
 		var tw := PIXEL_FONT.get_string_size(txt, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size)
-		var pos := base + Vector2((x + 1) * CELL_SIZE + CELL_SIZE / 2.0 - tw.x / 2.0, CELL_SIZE / 2.0 + vy)
-		draw_string(PIXEL_FONT, pos, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, col)
+		var cx := (x + 1) * CELL_SIZE + CELL_SIZE / 2.0 - tw.x / 2.0
+		var cy: float
+		if col_edge == TC.EDGE_TOP:
+			cy = CELL_SIZE / 2.0 + vy
+		else:
+			cy = (gh + 1) * CELL_SIZE + CELL_SIZE / 2.0 + vy
+		draw_string(PIXEL_FONT, base + Vector2(cx, cy), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, col)
 
-	# Row clues (right of grid)
+	# Row clues (left or right of grid)
 	for y in range(gh):
 		var num: int = clues[gw + y]
 		var is_err: bool = errors[gw + y] != 0
-		var col := Color(1.0, 0.2, 0.2) if is_err else Color(0.8, 0.8, 0.7)
+		var col := Color(1.0, 0.2, 0.2, alpha) if is_err else Color(0.8, 0.8, 0.7, alpha)
 		var txt := str(num)
 		var tw := PIXEL_FONT.get_string_size(txt, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size)
-		var pos := base + Vector2((gw + 1) * CELL_SIZE + CELL_SIZE / 2.0 - tw.x / 2.0, (y + 1) * CELL_SIZE + CELL_SIZE / 2.0 + vy)
-		draw_string(PIXEL_FONT, pos, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, col)
+		var rx: float
+		if row_edge == TC.EDGE_RIGHT:
+			rx = (gw + 1) * CELL_SIZE + CELL_SIZE / 2.0 - tw.x / 2.0
+		else:
+			rx = CELL_SIZE / 2.0 - tw.x / 2.0
+		var ry := (y + 1) * CELL_SIZE + CELL_SIZE / 2.0 + vy
+		draw_string(PIXEL_FONT, base + Vector2(rx, ry), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, col)
 
-	# "A" label at entrance edge
-	_draw_edge_label("A", ld["ent_edge"], ld["ent_pos"], base, font_size, vy, gw, gh)
 
-	# "B" label at exit edge
-	_draw_edge_label("B", ld["ext_edge"], ld["ext_pos"], base, font_size, vy, gw, gh)
-
-
-func _draw_edge_label(label: String, edge: int, pos_along: int, base: Vector2, font_size: int, vy: int, gw: int, gh: int) -> void:
-	var txt_w := PIXEL_FONT.get_string_size(label, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size)
-	var lbl_pos := Vector2.ZERO
-	match edge:
-		TC.EDGE_LEFT:
-			lbl_pos = base + Vector2(CELL_SIZE / 2.0 - txt_w.x / 2.0, (pos_along + 1) * CELL_SIZE + CELL_SIZE / 2.0 + vy)
-		TC.EDGE_RIGHT:
-			lbl_pos = base + Vector2((gw + 2) * CELL_SIZE + CELL_SIZE / 2.0 - txt_w.x / 2.0, (pos_along + 1) * CELL_SIZE + CELL_SIZE / 2.0 + vy)
-		TC.EDGE_TOP:
-			lbl_pos = base + Vector2((pos_along + 1) * CELL_SIZE + CELL_SIZE / 2.0 - txt_w.x / 2.0, vy - 2)
-		TC.EDGE_BOTTOM:
-			lbl_pos = base + Vector2((pos_along + 1) * CELL_SIZE + CELL_SIZE / 2.0 - txt_w.x / 2.0, (gh + 1) * CELL_SIZE + CELL_SIZE / 2.0 + vy)
-	draw_string(PIXEL_FONT, lbl_pos, label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0.9, 0.8, 0.3))
 
 
 # ===========================================================================
@@ -210,15 +215,6 @@ func _handle_click(gx: int, gy: int, local_pos: Vector2, is_right: bool) -> void
 			dir = TC.DIR_L if dx < 0 else TC.DIR_R
 		grid_manager.apply_edge_toggle(gx, gy, dir, is_right)
 
-
-func _input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var local: Vector2 = event.global_position - global_position
-		var screen_origin := _camera.offset - Vector2(160, 90)
-		var btn_world := Rect2(NEW_BTN_RECT.position + screen_origin, NEW_BTN_RECT.size)
-		if btn_world.has_point(local):
-			_on_new_game_pressed()
-			get_viewport().set_input_as_handled()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -314,6 +310,7 @@ func _refresh_all() -> void:
 
 func _on_puzzle_solved() -> void:
 	_solved = true
+	print("[TRACKS] puzzle_solved chain=%d  grid=%dx%d  origin=%s" % [_chain_count, grid_manager.GRID_W, grid_manager.GRID_H, _current_grid_origin])
 	_play_win_highlight()
 
 
@@ -337,6 +334,7 @@ func _play_win_highlight() -> void:
 			sq_node.highlight = 1.0
 			tween.tween_property(sq_node, "highlight", 0.0, 0.8).set_delay(delay).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 			delay += 0.04
+	print("[TRACKS] win_highlight started  total_delay=%.2fs" % delay)
 	tween.finished.connect(_spawn_decorations)
 
 
@@ -352,7 +350,9 @@ func _spawn_decorations() -> void:
 			if not has_track:
 				empty_indices.append(idx)
 
+	print("[TRACKS] spawn_decorations  empty_count=%d" % empty_indices.size())
 	if empty_indices.is_empty():
+		print("[TRACKS]   no empties, skipping to transition")
 		_on_decorations_done()
 		return
 
@@ -360,6 +360,7 @@ func _spawn_decorations() -> void:
 	var deco_count := maxi(int(empty_indices.size() * randf_range(0.6, 0.8)), 1)
 	var selected := empty_indices.slice(0, deco_count)
 	selected.sort()
+	print("[TRACKS]   placing %d decorations" % selected.size())
 
 	var types := [square_nodes[0].DECO_TREE, square_nodes[0].DECO_HOUSE, square_nodes[0].DECO_WATER]
 	for idx in selected:
@@ -379,6 +380,7 @@ func _spawn_decorations() -> void:
 
 
 func _on_decorations_done() -> void:
+	print("[TRACKS] decorations_done -> waiting 1s then chain transition")
 	var pause_tween := create_tween()
 	pause_tween.tween_callback(_start_chain_transition).set_delay(1.0)
 
@@ -396,16 +398,15 @@ func _start_chain_transition() -> void:
 	var old_gw: int = grid_manager.GRID_W
 	var old_gh: int = grid_manager.GRID_H
 
-	# Compute where the next grid sits in world space (adjacent to current grid)
-	var exit_dir := TC.edge_slide_dir(old_exit_edge)
-	var next_origin := _current_grid_origin + Vector2(
-		exit_dir.x * old_gw * CELL_SIZE,
-		exit_dir.y * old_gh * CELL_SIZE,
-	)
-
 	# Compute next puzzle entrance (opposite of current exit, same position)
 	var next_ent_edge: int = TC.opposite_edge(old_exit_edge)
 	var next_ent_pos := old_exit_pos
+
+	var _edge_names := {TC.EDGE_LEFT: "LEFT", TC.EDGE_RIGHT: "RIGHT", TC.EDGE_TOP: "TOP", TC.EDGE_BOTTOM: "BOTTOM"}
+	print("=== CHAIN TRANSITION #%d ===" % _chain_count)
+	print("  old grid: %dx%d  origin=%s" % [old_gw, old_gh, _current_grid_origin])
+	print("  old exit: edge=%s pos=%d" % [_edge_names.get(old_exit_edge, "?"), old_exit_pos])
+	print("  new entrance: edge=%s pos=%d" % [_edge_names.get(next_ent_edge, "?"), next_ent_pos])
 
 	# Disconnect signals so generating the next puzzle doesn't refresh old nodes
 	grid_manager.grid_changed.disconnect(_on_grid_changed)
@@ -423,12 +424,29 @@ func _start_chain_transition() -> void:
 	_chain_count += 1
 	_apply_level(_chain_count)
 	var next_diff := _current_diff()
+	var level_idx := mini(_chain_count, PROGRESSION.size() - 1)
+	print("  progression: chain_count=%d  level_idx=%d  target=%dx%d  diff=%d" % [_chain_count, level_idx, grid_manager.GRID_W, grid_manager.GRID_H, next_diff])
 
 	# Generate next puzzle with new dimensions and difficulty
 	grid_manager.generate_puzzle_from(next_ent_edge, next_ent_pos, next_diff)
 
 	var gw: int = grid_manager.GRID_W
 	var gh: int = grid_manager.GRID_H
+	print("  generated: %dx%d  entrance=%s@%d  exit=%s@%d" % [gw, gh, _edge_names.get(grid_manager.entrance_edge, "?"), grid_manager.entrance_pos, _edge_names.get(grid_manager.exit_edge, "?"), grid_manager.exit_pos])
+
+	# Compute where the next grid sits in world space (adjacent to current grid).
+	# For positive exit directions (RIGHT, BOTTOM) the old grid's size determines
+	# the offset. For negative directions (LEFT, TOP) the new grid's size determines
+	# it, because the new grid extends in the negative direction from the shared edge.
+	var exit_dir := TC.edge_slide_dir(old_exit_edge)
+	var offset_w: int = old_gw if exit_dir.x > 0 else gw
+	var offset_h: int = old_gh if exit_dir.y > 0 else gh
+	var next_origin := _current_grid_origin + Vector2(
+		exit_dir.x * offset_w * CELL_SIZE,
+		exit_dir.y * offset_h * CELL_SIZE,
+	)
+	print("  positioning: exit_dir=%s  offset_w=%d  offset_h=%d" % [exit_dir, offset_w, offset_h])
+	print("  next_origin=%s  (delta=%s)" % [next_origin, next_origin - _current_grid_origin])
 
 	# Create new container at its real world position
 	_current_container = Node2D.new()
@@ -448,8 +466,20 @@ func _start_chain_transition() -> void:
 	# Snapshot labels for the new grid
 	_snapshot_current_labels(next_origin)
 
+	# Fade out old grid's clue labels (second-to-last entry, since we just appended the new one)
+	var old_label_idx := _grid_labels.size() - 2
+	if old_label_idx >= 0:
+		var old_ld: Dictionary = _grid_labels[old_label_idx]
+		var fade_tween := create_tween()
+		fade_tween.tween_method(func(v: float) -> void:
+			old_ld["alpha"] = v
+			queue_redraw()
+		, 1.0, 0.0, TILE_DROP_DURATION + TILE_DROP_STAGGER * gw * gh)
+
 	# --- Phase 1: Tile drop animation ---
+	print("  tile_drop: %d tiles  drop_height=%.0f  duration=%.2f  stagger=%.2f" % [gw * gh, TILE_DROP_HEIGHT, TILE_DROP_DURATION, TILE_DROP_STAGGER])
 	var ent_cell := TC.edge_to_cell(next_ent_edge, next_ent_pos, gw, gh)
+	print("  entrance_cell=(%d,%d)  tiles ripple from here" % [ent_cell.x, ent_cell.y])
 
 	var tile_order := []
 	for y in range(gh):
@@ -487,6 +517,7 @@ func _start_chain_transition() -> void:
 
 		delay += TILE_DROP_STAGGER
 
+	print("  tile_drop: total_anim_time=%.2fs" % (delay + TILE_DROP_DURATION))
 	_transition_tween.finished.connect(_on_tile_drop_finished)
 
 
@@ -499,6 +530,7 @@ func _on_tile_drop_finished() -> void:
 		(gh + 2) * CELL_SIZE / 2.0,
 	)
 	var target_offset := grid_center
+	print("[TRACKS] tile_drop_finished -> camera pan  from=%s  to=%s  duration=%.2f" % [_camera.offset, target_offset, CAMERA_PAN_DURATION])
 
 	if _transition_tween and _transition_tween.is_valid():
 		_transition_tween.kill()
@@ -512,6 +544,8 @@ func _on_tile_drop_finished() -> void:
 func _on_transition_finished() -> void:
 	_transitioning = false
 	_solved = false
+	print("[TRACKS] transition_finished  chain=%d  grid=%dx%d  origin=%s  camera=%s" % [_chain_count, grid_manager.GRID_W, grid_manager.GRID_H, _current_grid_origin, _camera.offset])
+	print("[TRACKS]   ready for player input")
 
 	# Reconnect signals for the new puzzle
 	grid_manager.puzzle_solved.connect(_on_puzzle_solved)
@@ -520,74 +554,53 @@ func _on_transition_finished() -> void:
 	_refresh_all()
 
 
-func _on_new_game_pressed() -> void:
-	_solved = false
-	_transitioning = false
-	_drag_active = false
-	_drag_sx = -1
-	_chain_count = 0
-	if _win_tween and _win_tween.is_valid():
-		_win_tween.kill()
-		_win_tween = null
-	if _deco_tween and _deco_tween.is_valid():
-		_deco_tween.kill()
-		_deco_tween = null
-	if _transition_tween and _transition_tween.is_valid():
-		_transition_tween.kill()
-		_transition_tween = null
-
-	# Clean up all old containers
-	for old_c in _old_containers:
-		old_c.queue_free()
-	_old_containers.clear()
-
-	# Clean up current container
-	for sq_node in square_nodes:
-		sq_node.square_clicked.disconnect(_on_square_clicked)
-		sq_node.square_right_clicked.disconnect(_on_square_right_clicked)
-		sq_node.queue_free()
-	square_nodes.clear()
-	if _current_container:
-		_current_container.queue_free()
-
-	_grid_labels.clear()
-	_current_grid_origin = Vector2.ZERO
-
-	grid_manager.grid_changed.disconnect(_on_grid_changed)
-	grid_manager.puzzle_solved.disconnect(_on_puzzle_solved)
-
-	_apply_level(0)
-	grid_manager.generate_puzzle(_current_diff())
-	_current_container = Node2D.new()
-	add_child(_current_container)
-	_create_square_nodes(_current_container, square_nodes)
-	_snapshot_current_labels(Vector2.ZERO)
-	grid_manager.puzzle_solved.connect(_on_puzzle_solved)
-	grid_manager.grid_changed.connect(_on_grid_changed)
-
-	# Reset camera
-	_camera.offset = Vector2(160, 90)
-
-	_refresh_all()
-
 
 # ===========================================================================
 # Helpers
 # ===========================================================================
 
-func _draw_new_button(font_size: int) -> void:
-	var screen_origin := _camera.offset - Vector2(160, 90)
-	var btn_rect := Rect2(NEW_BTN_RECT.position + screen_origin, NEW_BTN_RECT.size)
-	draw_rect(btn_rect, Color(0.25, 0.23, 0.2))
-	draw_rect(btn_rect, Color(0.4, 0.38, 0.35), false)
-	var txt := "New"
-	var ts := PIXEL_FONT.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
-	var ascent := PIXEL_FONT.get_ascent(font_size)
-	var descent := PIXEL_FONT.get_descent(font_size)
-	var text_h := ascent + descent
-	var tx := btn_rect.position.x + (btn_rect.size.x - ts.x) / 2.0
-	var ty := btn_rect.position.y + (btn_rect.size.y - text_h) / 2.0 + ascent
-	draw_string(PIXEL_FONT, Vector2(tx, ty), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0.8, 0.8, 0.7))
+## Check if placing clues on a given edge of the current grid would overlap
+## with any existing old grid's tile area. Returns true if the clue zone on
+## that edge intersects an old grid's tile rect.
+func _edge_blocked(origin: Vector2, gw: int, gh: int, edge: int) -> bool:
+	# The clue zone is a 1-cell-wide strip on the given edge.
+	# Compute the world-space rect of that strip.
+	var base := origin + GRID_OFFSET
+	var clue_rect: Rect2
+	match edge:
+		TC.EDGE_TOP:
+			clue_rect = Rect2(base.x + CELL_SIZE, base.y, gw * CELL_SIZE, CELL_SIZE)
+		TC.EDGE_BOTTOM:
+			clue_rect = Rect2(base.x + CELL_SIZE, base.y + (gh + 1) * CELL_SIZE, gw * CELL_SIZE, CELL_SIZE)
+		TC.EDGE_LEFT:
+			clue_rect = Rect2(base.x, base.y + CELL_SIZE, CELL_SIZE, gh * CELL_SIZE)
+		TC.EDGE_RIGHT:
+			clue_rect = Rect2(base.x + (gw + 1) * CELL_SIZE, base.y + CELL_SIZE, CELL_SIZE, gh * CELL_SIZE)
+		_:
+			return false
+
+	# Check against all existing grids' tile areas
+	for ld in _grid_labels:
+		var old_origin: Vector2 = ld["origin"]
+		var old_gw: int = ld["w"]
+		var old_gh: int = ld["h"]
+		var old_base := old_origin + GRID_OFFSET
+		# Tile area: starts at (1,1) cell offset, spans gw x gh cells
+		var tile_rect := Rect2(
+			old_base.x + CELL_SIZE, old_base.y + CELL_SIZE,
+			old_gw * CELL_SIZE, old_gh * CELL_SIZE
+		)
+		if clue_rect.intersects(tile_rect):
+			return true
+	return false
+
+
+## Pick the first unblocked edge from candidates. Falls back to first candidate.
+func _pick_free_edge(origin: Vector2, gw: int, gh: int, candidates: Array) -> int:
+	for edge in candidates:
+		if not _edge_blocked(origin, gw, gh, edge):
+			return edge
+	return candidates[0]
 
 
 func _mouse_to_grid(global_pos: Vector2) -> Vector2i:
