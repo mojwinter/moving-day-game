@@ -5,10 +5,7 @@ extends Resource
 var connections: int = 0
 var is_source: bool = false
 var is_active: bool = false
-var is_soldered: bool = false
-var has_pot: bool = false
-var pot_value: int = 50
-var pot_label: String = ""
+var is_revealed: bool = false  ## Fog of war: tile content visible to player
 
 
 ## Clockwise rotation: R->D->L->U->R

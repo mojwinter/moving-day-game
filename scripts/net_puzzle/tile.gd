@@ -1,33 +1,48 @@
 extends Node2D
 ## Visual representation of a single grid tile.
-## Draws connection arms via _draw() and handles click input via Area2D.
-## Supports three draw modes: ROTATION, TRACE, and CALIBRATION.
+## Renders pipe sprites from a sprite sheet and handles click input via Area2D.
 
 const NC := preload("res://scripts/net_puzzle/net_consts.gd")
 
 signal tile_clicked(grid_x: int, grid_y: int)
 
-const CELL_SIZE := 20.0
-const ARM_WIDTH := 1.0
-const CENTER := Vector2(CELL_SIZE / 2.0, CELL_SIZE / 2.0)
+const PIPE_SHEET := preload("res://assets/network/pipes16x16.png")
+const SPRITE_SIZE := 16
+
+## Maps a connection bitmask to { "col": sprite column, "rot": CW 90° rotations }.
+## CW visual rotation = CW bitmask rotation: U(2)->R(1)->D(8)->L(4)
+const PIPE_LOOKUP := {
+	# Dead ends (1 connection) — base: UP (2)
+	2:  { "col": 0, "rot": 0 },   # UP
+	1:  { "col": 0, "rot": 1 },   # RIGHT
+	8:  { "col": 0, "rot": 2 },   # DOWN
+	4:  { "col": 0, "rot": 3 },   # LEFT
+	# Straights (2 opposite) — base: UP+DOWN (10)
+	10: { "col": 1, "rot": 0 },   # UP+DOWN
+	5:  { "col": 1, "rot": 1 },   # RIGHT+LEFT
+	# L-bends (2 adjacent) — base: DOWN+RIGHT (9)
+	9:  { "col": 2, "rot": 0 },   # DOWN+RIGHT
+	12: { "col": 2, "rot": 1 },   # DOWN+LEFT
+	6:  { "col": 2, "rot": 2 },   # UP+LEFT
+	3:  { "col": 2, "rot": 3 },   # UP+RIGHT
+	# T-junctions (3 connections) — base: UP+DOWN+RIGHT (11)
+	11: { "col": 3, "rot": 0 },   # UP+DOWN+RIGHT
+	13: { "col": 3, "rot": 1 },   # DOWN+LEFT+RIGHT
+	14: { "col": 3, "rot": 2 },   # UP+DOWN+LEFT
+	7:  { "col": 3, "rot": 3 },   # UP+LEFT+RIGHT
+	# Cross (4 connections)
+	15: { "col": 4, "rot": 0 },
+}
+
+var cell_size: float = 16.0
+var center: Vector2 = Vector2(8.0, 8.0)
 
 const BG_COLOR := Color(0.15, 0.15, 0.2)
-const ACTIVE_COLOR := Color(1.0, 0.85, 0.0)   # warm yellow when powered
-const INACTIVE_COLOR := Color(0.4, 0.4, 0.45)  # gray when unpowered
-const SOURCE_COLOR := Color(1.0, 1.0, 1.0)     # white source indicator
-const SOLDER_COLOR := Color(0.8, 0.8, 0.8)     # bright silver for soldered traces
-const UNSOLDER_COLOR := Color(0.25, 0.25, 0.3) # dim for unsoldered traces
-
-const PIXEL_FONT := preload("res://assets/fonts/m3x6.ttf")
-
-## Draw mode enum matching net_puzzle.gd Stage enum values.
-enum DrawMode { ROTATION, TRACE, CALIBRATION }
-var draw_mode: int = DrawMode.ROTATION
-
+const FOG_COLOR := Color(0.012, 0.02, 0.078)  # #030514
 const HIGHLIGHT_COLOR := Color(0.95, 0.85, 0.3)
+const SOURCE_COLOR := Color(1.0, 1.0, 1.0)
 
-## Color override used by calibration stage to tint all arms.
-var calibration_color: Color = SOLDER_COLOR
+const ROTATE_TIME := 0.15  ## Seconds for rotation animation
 
 var highlight: float = 0.0:
 	set(v):
@@ -38,10 +53,24 @@ var grid_x: int = 0
 var grid_y: int = 0
 var tile_data = null
 
+## Rotation animation state
+var _anim_angle: float = 0.0      ## Current extra rotation in degrees (0 to 90)
+var _anim_active: bool = false
+var _anim_conns: int = 0           ## Connection bitmask BEFORE rotation (used during anim)
+var _anim_was_active: bool = false  ## Active state BEFORE rotation
 
-func setup(x: int, y: int) -> void:
+
+func setup(x: int, y: int, p_cell_size: float = 16.0) -> void:
 	grid_x = x
 	grid_y = y
+	cell_size = p_cell_size
+	center = Vector2(cell_size / 2.0, cell_size / 2.0)
+	var area := get_node_or_null("ClickArea")
+	if area:
+		var shape_owner := area.get_node_or_null("CollisionShape")
+		if shape_owner and shape_owner.shape is RectangleShape2D:
+			shape_owner.shape.size = Vector2(cell_size, cell_size)
+			shape_owner.position = center
 
 
 func refresh(data) -> void:
@@ -49,82 +78,84 @@ func refresh(data) -> void:
 	queue_redraw()
 
 
-func _draw() -> void:
-	# Background
-	var bg := BG_COLOR.lerp(HIGHLIGHT_COLOR, highlight * 0.4) if highlight > 0.0 else BG_COLOR
-	draw_rect(Rect2(1, 1, CELL_SIZE - 2, CELL_SIZE - 2), bg)
+## Call this BEFORE rotating the bitmask to kick off the animation.
+## Captures the pre-rotation visual state so we can animate from it.
+func start_rotate_anim(old_connections: int, old_active: bool) -> void:
+	_anim_conns = old_connections
+	_anim_was_active = old_active
+	_anim_angle = 0.0
+	_anim_active = true
 
+
+func _process(delta: float) -> void:
+	if not _anim_active:
+		return
+	_anim_angle += delta / ROTATE_TIME * 90.0
+	if _anim_angle >= 90.0:
+		_anim_angle = 0.0
+		_anim_active = false
+	queue_redraw()
+
+
+func _draw() -> void:
 	if tile_data == null:
+		draw_rect(Rect2(0, 0, cell_size, cell_size), BG_COLOR)
 		return
 
-	if draw_mode == DrawMode.ROTATION:
-		_draw_rotation()
-	elif draw_mode == DrawMode.TRACE:
-		_draw_trace()
-	elif draw_mode == DrawMode.CALIBRATION:
-		_draw_calibration()
+	# Fog of war: hidden tiles show as dark squares
+	if not tile_data.is_revealed:
+		draw_rect(Rect2(0, 0, cell_size, cell_size), FOG_COLOR)
+		return
 
+	# Background tile sprite (row 2, col 0) — drawn 1:1 at origin
+	var bg_src := Rect2(0, 2 * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE)
+	var bg_tint := Color.WHITE.lerp(HIGHLIGHT_COLOR, highlight * 0.4) if highlight > 0.0 else Color.WHITE
+	draw_texture_rect_region(PIPE_SHEET, Rect2(0, 0, SPRITE_SIZE, SPRITE_SIZE), bg_src, bg_tint)
 
-func _draw_rotation() -> void:
-	var color: Color = ACTIVE_COLOR if tile_data.is_active else INACTIVE_COLOR
-	_draw_arms(color)
-	draw_circle(CENTER, ARM_WIDTH * 0.75, color)
-	if tile_data.is_source:
-		draw_circle(CENTER, 2.0, SOURCE_COLOR)
+	# During animation: use pre-rotation bitmask + interpolated angle
+	# After animation: use current bitmask at its natural angle
+	var conns: int
+	var is_active: bool
+	var extra_angle: float
 
+	if _anim_active:
+		conns = _anim_conns & 0x0F
+		is_active = _anim_was_active
+		extra_angle = _anim_angle
+	else:
+		conns = tile_data.connections & 0x0F
+		is_active = tile_data.is_active
+		extra_angle = 0.0
 
-func _draw_trace() -> void:
-	var color: Color = SOLDER_COLOR if tile_data.is_soldered else UNSOLDER_COLOR
-	_draw_arms(color)
-	draw_circle(CENTER, ARM_WIDTH * 0.75, color)
-	if tile_data.is_source:
-		draw_circle(CENTER, 2.0, SOURCE_COLOR)
+	if conns == 0:
+		return
 
+	var half := SPRITE_SIZE / 2.0
 
-func _draw_calibration() -> void:
-	_draw_arms(calibration_color)
-	draw_circle(CENTER, ARM_WIDTH * 0.75, calibration_color)
-	if tile_data.is_source:
-		draw_circle(CENTER, 2.0, SOURCE_COLOR)
+	if conns in PIPE_LOOKUP:
+		var info: Dictionary = PIPE_LOOKUP[conns]
+		var row: int = 0 if is_active else 1
+		var src_rect := Rect2(info["col"] * SPRITE_SIZE, row * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE)
 
-	# Draw potentiometer knob if this tile has one
-	if tile_data.has_pot:
-		_draw_pot_knob()
+		var base_angle: float = info["rot"] * 90.0
+		var total_angle: float = base_angle + extra_angle
+		var tint := Color.WHITE.lerp(HIGHLIGHT_COLOR, highlight) if highlight > 0.0 else Color.WHITE
 
+		# Rotate around center, no scaling (1:1 at 16px)
+		draw_set_transform(center, deg_to_rad(total_angle), Vector2.ONE)
+		draw_texture_rect_region(PIPE_SHEET, Rect2(-half, -half, SPRITE_SIZE, SPRITE_SIZE), src_rect, tint)
 
-func _draw_pot_knob() -> void:
-	var knob_radius := 4.0
-	var knob_bg := Color(0.3, 0.3, 0.35)
-	var knob_ring := Color(0.6, 0.6, 0.65)
-
-	# Knob background circle
-	draw_circle(CENTER, knob_radius, knob_bg)
-	# Outer ring
-	draw_arc(CENTER, knob_radius, 0, TAU, 24, knob_ring, 1.0)
-
-	# Indicator line: pot_value 0-100 maps to angle range (roughly 225 deg sweep)
-	# 0 = 7 o'clock (225 deg), 100 = 5 o'clock (-45 deg / 315 deg)
-	var min_angle := deg_to_rad(225.0)  # 0 position
-	var max_angle := deg_to_rad(-45.0)  # 100 position (same as 315 but going CW)
-	var t: float = float(tile_data.pot_value) / 100.0
-	var angle := min_angle + t * (max_angle - min_angle)
-	var indicator_end := CENTER + Vector2(cos(angle), -sin(angle)) * (knob_radius - 2.0)
-	draw_line(CENTER, indicator_end, Color.WHITE, 1.0, true)
-
-	# Combined label + value below the knob (e.g. "V50")
-	var font_size := 16
-	var txt: String = tile_data.pot_label + str(tile_data.pot_value) if tile_data.pot_label != "" else str(tile_data.pot_value)
-	var tw := PIXEL_FONT.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
-	draw_string(PIXEL_FONT, Vector2((CELL_SIZE - tw.x) / 2.0, CELL_SIZE + PIXEL_FONT.get_ascent(font_size)),
-		txt, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color.WHITE)
-
-
-func _draw_arms(color: Color) -> void:
-	var c := color.lerp(HIGHLIGHT_COLOR, highlight) if highlight > 0.0 else color
-	for dir in NC.DIRECTIONS:
-		if tile_data.has_connection(dir):
-			var end_offset := Vector2(NC.DIR_OFFSET[dir]) * (CELL_SIZE / 2.0)
-			draw_line(CENTER, CENTER + end_offset, c, ARM_WIDTH, true)
+	# Source overlay sprite (row 2, cols 1-4 match pipe cols 1-4)
+	if tile_data.is_source and conns in PIPE_LOOKUP:
+		var info: Dictionary = PIPE_LOOKUP[conns]
+		if info["col"] >= 1:
+			var src_src := Rect2(info["col"] * SPRITE_SIZE, 2 * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE)
+			var base_angle: float = info["rot"] * 90.0
+			var src_angle: float = base_angle + extra_angle
+			var src_tint := Color.WHITE.lerp(HIGHLIGHT_COLOR, highlight) if highlight > 0.0 else Color.WHITE
+			draw_set_transform(center, deg_to_rad(src_angle), Vector2.ONE)
+			draw_texture_rect_region(PIPE_SHEET, Rect2(-half, -half, SPRITE_SIZE, SPRITE_SIZE), src_src, src_tint)
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func _on_click_area_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
