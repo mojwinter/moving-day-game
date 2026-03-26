@@ -37,6 +37,13 @@ var _solved := false
 var _win_tween: Tween = null
 var _deco_tween: Tween = null
 var _transition_tween: Tween = null
+var _tile_flip_tween: Tween = null
+var _grid_line_alpha: float = 1.0:
+	set(v):
+		_grid_line_alpha = v
+		if not _grid_labels.is_empty():
+			_grid_labels[-1]["alpha"] = v
+		queue_redraw()
 
 # Chain state
 var _chain_count: int = 0
@@ -44,6 +51,7 @@ var _transitioning := false
 
 # Container for current grid's square nodes
 var _current_container: Node2D = null
+var _current_border: Node2D = null
 # World-space offset of the current active grid's container
 var _current_grid_origin := Vector2.ZERO
 
@@ -80,6 +88,7 @@ func _ready() -> void:
 	_current_container = Node2D.new()
 	add_child(_current_container)
 	_create_square_nodes(_current_container, square_nodes)
+	_current_border = _create_border_node(_current_container)
 	_snapshot_current_labels(Vector2.ZERO)
 	_refresh_all()
 	grid_manager.puzzle_solved.connect(_on_puzzle_solved)
@@ -110,6 +119,35 @@ func _create_square_nodes(container: Node2D, nodes_array: Array) -> void:
 			sq_node.square_right_clicked.connect(_on_square_right_clicked)
 			container.add_child(sq_node)
 			nodes_array.append(sq_node)
+
+
+func _create_border_node(container: Node2D) -> Node2D:
+	var gw: int = grid_manager.GRID_W
+	var gh: int = grid_manager.GRID_H
+	var x0 := GRID_OFFSET.x + CELL_STRIDE
+	var y0 := GRID_OFFSET.y + CELL_STRIDE
+	var total_w := gw * CELL_STRIDE + 1
+	var total_h := gh * CELL_STRIDE + 1
+	var border := Node2D.new()
+	border.z_index = 1
+	border.set_meta("x0", x0)
+	border.set_meta("y0", y0)
+	border.set_meta("total_w", total_w)
+	border.set_meta("total_h", total_h)
+	border.draw.connect(func() -> void:
+		var bx: float = border.get_meta("x0")
+		var by: float = border.get_meta("y0")
+		var bw: float = border.get_meta("total_w")
+		var bh: float = border.get_meta("total_h")
+		# Top and bottom
+		border.draw_rect(Rect2(bx, by, bw, 1), GRID_LINE_COLOR)
+		border.draw_rect(Rect2(bx, by + bh - 1, bw, 1), GRID_LINE_COLOR)
+		# Left and right
+		border.draw_rect(Rect2(bx, by + 1, 1, bh - 2), GRID_LINE_COLOR)
+		border.draw_rect(Rect2(bx + bw - 1, by + 1, 1, bh - 2), GRID_LINE_COLOR)
+	)
+	container.add_child(border)
+	return border
 
 
 func _snapshot_current_labels(origin: Vector2) -> void:
@@ -150,18 +188,17 @@ func _draw() -> void:
 
 func _draw_grid_lines(origin: Vector2, gw: int, gh: int, alpha: float) -> void:
 	var base := origin + GRID_OFFSET
-	# Grid tile area starts at stride offset (1,1), each cell is 16px with 1px borders
 	var x0 := base.x + CELL_STRIDE
 	var y0 := base.y + CELL_STRIDE
-	var total_w := gw * CELL_STRIDE + 1  # +1 for the far-right border
-	var total_h := gh * CELL_STRIDE + 1  # +1 for the bottom border
+	var total_w := gw * CELL_STRIDE + 1
+	var total_h := gh * CELL_STRIDE + 1
 	var col := Color(GRID_LINE_COLOR, alpha)
-	# Horizontal lines (gh + 1 lines) — use 1px filled rects for pixel-perfect lines
-	for row in range(gh + 1):
+	# Inner horizontal lines only (skip first and last = outer border)
+	for row in range(1, gh):
 		var y := y0 + row * CELL_STRIDE
 		draw_rect(Rect2(x0, y, total_w, 1), col)
-	# Vertical lines (gw + 1 lines)
-	for column in range(gw + 1):
+	# Inner vertical lines only
+	for column in range(1, gw):
 		var x := x0 + column * CELL_STRIDE
 		draw_rect(Rect2(x, y0, 1, total_h), col)
 
@@ -176,14 +213,15 @@ func _draw_grid_labels(ld: Dictionary) -> void:
 	if alpha > 0.0:
 		_draw_grid_lines(ld["origin"], gw, gh, alpha)
 
+	if alpha <= 0.0:
+		return
+
 	var errors: Array = ld["errors"]
 	var font_size := 16
 	var vy := 6
 	var base: Vector2 = ld["origin"] + GRID_OFFSET
 	var col_edge: int = ld.get("clue_col_edge", TC.EDGE_TOP)
 	var row_edge: int = ld.get("clue_row_edge", TC.EDGE_RIGHT)
-	if alpha <= 0.0:
-		return
 
 	# Column clues (top or bottom of grid)
 	for x in range(gw):
@@ -334,6 +372,17 @@ func _refresh_all() -> void:
 	for y in range(gh):
 		for x in range(gw):
 			var idx := y * gw + x
+			# Compute neighbor track edges facing this cell
+			var nt := 0
+			if x > 0 and (grid_manager.squares[idx - 1].e_dirs(TC.E_TRACK) & TC.DIR_R):
+				nt |= TC.DIR_L
+			if y > 0 and (grid_manager.squares[idx - gw].e_dirs(TC.E_TRACK) & TC.DIR_D):
+				nt |= TC.DIR_U
+			if x < gw - 1 and (grid_manager.squares[idx + 1].e_dirs(TC.E_TRACK) & TC.DIR_L):
+				nt |= TC.DIR_R
+			if y < gh - 1 and (grid_manager.squares[idx + gw].e_dirs(TC.E_TRACK) & TC.DIR_U):
+				nt |= TC.DIR_D
+			square_nodes[idx]._neighbor_track = nt
 			square_nodes[idx].refresh(grid_manager.squares[idx])
 	# Update current grid's label errors in-place
 	if _grid_labels.size() > 0:
@@ -389,15 +438,42 @@ func _spawn_decorations() -> void:
 		_on_decorations_done()
 		return
 
-	empty_indices.shuffle()
-	var deco_count := maxi(int(empty_indices.size() * randf_range(0.6, 0.8)), 1)
-	var selected := empty_indices.slice(0, deco_count)
+	# Build a set of empty cell indices for fast neighbor lookup
+	var empty_set := {}
+	for idx in empty_indices:
+		empty_set[idx] = true
+
+	# Compute autotile neighbor mask for each empty cell
+	for idx in empty_indices:
+		var x: int = idx % gw
+		var y: int = idx / gw
+		var mask := 0
+		if x < gw - 1 and empty_set.has(idx + 1):
+			mask |= TC.DIR_R
+		if y > 0 and empty_set.has(idx - gw):
+			mask |= TC.DIR_U
+		if x > 0 and empty_set.has(idx - 1):
+			mask |= TC.DIR_L
+		if y < gh - 1 and empty_set.has(idx + gw):
+			mask |= TC.DIR_D
+		# Diagonal neighbors for inner corners (NE=16, NW=32, SE=64, SW=128)
+		if x < gw - 1 and y > 0 and empty_set.has(idx - gw + 1):
+			mask |= 16  # NE
+		if x > 0 and y > 0 and empty_set.has(idx - gw - 1):
+			mask |= 32  # NW
+		if x < gw - 1 and y < gh - 1 and empty_set.has(idx + gw + 1):
+			mask |= 64  # SE
+		if x > 0 and y < gh - 1 and empty_set.has(idx + gw - 1):
+			mask |= 128  # SW
+		square_nodes[idx]._green_mask = mask
+
+	# All empty cells get DECO_TREE (green autotile); pick some for house/water instead
+	var selected := empty_indices.duplicate()
 	selected.sort()
 	print("[TRACKS]   placing %d decorations" % selected.size())
 
-	var types := [square_nodes[0].DECO_TREE, square_nodes[0].DECO_HOUSE, square_nodes[0].DECO_WATER]
 	for idx in selected:
-		square_nodes[idx].decoration = types[randi() % types.size()]
+		square_nodes[idx].decoration = square_nodes[0].DECO_TREE
 
 	if _deco_tween and _deco_tween.is_valid():
 		_deco_tween.kill()
@@ -409,13 +485,51 @@ func _spawn_decorations() -> void:
 		sq_node.deco_alpha = 0.0
 		_deco_tween.tween_property(sq_node, "deco_alpha", 1.0, 0.3).set_delay(delay).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		delay += 0.06
-	_deco_tween.finished.connect(_on_decorations_done)
+	_deco_tween.finished.connect(_flip_tiles_to_grey)
+
+
+func _flip_tiles_to_grey() -> void:
+	var gw: int = grid_manager.GRID_W
+	var gh: int = grid_manager.GRID_H
+	if _tile_flip_tween and _tile_flip_tween.is_valid():
+		_tile_flip_tween.kill()
+	_tile_flip_tween = create_tween()
+	_tile_flip_tween.set_parallel(true)
+	var delay := 0.0
+	for y in range(gh):
+		for x in range(gw):
+			var idx := y * gw + x
+			var sq_node = square_nodes[idx]
+			sq_node.tile_blend = 0.0
+			_tile_flip_tween.tween_property(sq_node, "tile_blend", 1.0, 0.3).set_delay(delay).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			delay += 0.04
+	_tile_flip_tween.finished.connect(_on_decorations_done)
 
 
 func _on_decorations_done() -> void:
-	print("[TRACKS] decorations_done -> waiting 1s then chain transition")
-	var pause_tween := create_tween()
-	pause_tween.tween_callback(_start_chain_transition).set_delay(1.0)
+	print("[TRACKS] decorations_done -> fading grid lines")
+	_grid_line_alpha = 1.0
+	var fade_tween := create_tween()
+	fade_tween.set_parallel(true)
+	fade_tween.tween_property(self, "_grid_line_alpha", 0.0, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	# Bleed cell edges into the grid gaps as lines fade
+	var gw: int = grid_manager.GRID_W
+	var gh: int = grid_manager.GRID_H
+	for y in range(gh):
+		for x in range(gw):
+			var sq_node = square_nodes[y * gw + x]
+			sq_node.grid_bleed = 0.0
+			fade_tween.tween_property(sq_node, "grid_bleed", 1.0, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			# Right column owns the right outer border
+			if x == gw - 1:
+				sq_node.grid_bleed_right = 0.0
+				fade_tween.tween_property(sq_node, "grid_bleed_right", 1.0, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			# Bottom row owns the bottom outer border
+			if y == gh - 1:
+				sq_node.grid_bleed_bottom = 0.0
+				fade_tween.tween_property(sq_node, "grid_bleed_bottom", 1.0, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	fade_tween.set_parallel(false)
+	fade_tween.tween_callback(_start_chain_transition).set_delay(0.5)
 
 
 # ===========================================================================
@@ -514,6 +628,7 @@ func _start_chain_transition() -> void:
 
 	square_nodes = []
 	_create_square_nodes(_current_container, square_nodes)
+	_current_border = _create_border_node(_current_container)
 
 	# Refresh visuals with new puzzle data
 	for y in range(gh):
@@ -522,6 +637,7 @@ func _start_chain_transition() -> void:
 			square_nodes[idx].refresh(grid_manager.squares[idx])
 
 	# Snapshot labels for the new grid
+	_grid_line_alpha = 1.0
 	_snapshot_current_labels(next_origin)
 
 	# Fade out old grid's clue labels (second-to-last entry, since we just appended the new one)
@@ -529,10 +645,12 @@ func _start_chain_transition() -> void:
 	if old_label_idx >= 0:
 		var old_ld: Dictionary = _grid_labels[old_label_idx]
 		var fade_tween := create_tween()
+		var fade_dur := TILE_DROP_DURATION + TILE_DROP_STAGGER * gw * gh
+		fade_tween.set_parallel(true)
 		fade_tween.tween_method(func(v: float) -> void:
 			old_ld["alpha"] = v
 			queue_redraw()
-		, 1.0, 0.0, TILE_DROP_DURATION + TILE_DROP_STAGGER * gw * gh)
+		, old_ld["alpha"], 0.0, fade_dur)
 
 	# --- Phase 1: Tile drop animation ---
 	print("  tile_drop: %d tiles  drop_height=%.0f  duration=%.2f  stagger=%.2f" % [gw * gh, TILE_DROP_HEIGHT, TILE_DROP_DURATION, TILE_DROP_STAGGER])

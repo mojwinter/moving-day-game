@@ -4,7 +4,13 @@ extends Node2D
 
 const TC := preload("res://scripts/tracks_puzzle/tracks_consts.gd")
 var TRACKS_TEX: Texture2D = load("res://assets/tracks/tracks3.png")
+var TILE_TEX: Texture2D = load("res://assets/tracks/dirt.png")
+var TILE_GREY_TEX: Texture2D = load("res://assets/tracks/tile_grey.png")
+var GREEN_TEX: Texture2D = load("res://assets/tracks/green3.png")
 const FRAME_SIZE := 16
+const TILE_FRAMES := 6
+const GREY_FRAMES := 4
+const GREEN_FRAMES := 4
 # tracks3.png layout: frame 0 = UD straight, frame 1 = RD curve
 # All variants derived via 90° rotation increments around cell center
 # Each entry: [frame_index, rotation_count] (0=0°, 1=90°CW, 2=180°, 3=270°CW)
@@ -19,6 +25,12 @@ const TRACK_FRAME := {
 
 signal square_clicked(grid_x: int, grid_y: int, local_pos: Vector2)
 signal square_right_clicked(grid_x: int, grid_y: int, local_pos: Vector2)
+
+# Diagonal neighbor bits for autotile inner corners
+const DIAG_NE := 16
+const DIAG_NW := 32
+const DIAG_SE := 64
+const DIAG_SW := 128
 
 const CELL_SIZE := 16.0
 const CENTER := Vector2(CELL_SIZE / 2.0, CELL_SIZE / 2.0)
@@ -61,6 +73,29 @@ var highlight: float = 0.0:  # 0.0 = normal, 1.0 = full highlight (win animation
 		highlight = v
 		queue_redraw()
 var decoration: int = DECO_NONE
+var _tile_frame: int = 0
+var _tile_flip_h: bool = false
+var _tile_flip_v: bool = false
+var _grey_frame: int = 0
+var _green_frame: int = 0
+var tile_blend: float = 0.0:  # 0.0 = dirt, 1.0 = grey
+	set(v):
+		tile_blend = v
+		queue_redraw()
+var _green_mask: int = 0  # autotile bitmask: R=1 U=2 L=4 D=8, diagonals: NE=16 NW=32 SE=64 SW=128
+var _neighbor_track: int = 0  # bitmask: which neighbors have track edges facing this cell (R=1 U=2 L=4 D=8)
+var grid_bleed: float = 0.0:  # 0→1, fills the 1px grid gap around this cell
+	set(v):
+		grid_bleed = v
+		queue_redraw()
+var grid_bleed_right: float = 0.0:  # separate bleed for right edge
+	set(v):
+		grid_bleed_right = v
+		queue_redraw()
+var grid_bleed_bottom: float = 0.0:  # separate bleed for bottom edge
+	set(v):
+		grid_bleed_bottom = v
+		queue_redraw()
 var deco_alpha: float = 0.0:
 	set(v):
 		deco_alpha = v
@@ -70,6 +105,13 @@ var deco_alpha: float = 0.0:
 func setup(x: int, y: int) -> void:
 	grid_x = x
 	grid_y = y
+	# Deterministic per-cell tile variant from position hash
+	var h := hash(x * 1000 + y)
+	_tile_frame = absi(h) % TILE_FRAMES
+	_tile_flip_h = (h >> 16) & 1 == 1
+	_tile_flip_v = (h >> 17) & 1 == 1
+	_grey_frame = absi(hash(y * 1000 + x)) % GREY_FRAMES
+	_green_frame = absi(hash(x * 31 + y * 97)) % GREEN_FRAMES
 
 
 func refresh(data) -> void:
@@ -82,10 +124,26 @@ func _draw() -> void:
 	var has_track: bool = false
 	if square_data != null:
 		has_track = square_data.has_flag(TC.S_TRACK) or square_data.e_count(TC.E_TRACK) > 0
-	var bg: Color = BG_TRACK if has_track else BG_COLOR
-	if highlight > 0.0 and has_track:
-		bg = bg.lerp(HIGHLIGHT_COLOR, highlight * 0.4)
-	draw_rect(Rect2(0, 0, CELL_SIZE, CELL_SIZE), bg)
+	# Draw tile background from atlas (randomized per cell)
+	var src := Rect2(_tile_frame * FRAME_SIZE, 0, FRAME_SIZE, FRAME_SIZE)
+	var dst := Rect2(0, 0, CELL_SIZE, CELL_SIZE)
+	if _tile_flip_h or _tile_flip_v:
+		var sx := -1.0 if _tile_flip_h else 1.0
+		var sy := -1.0 if _tile_flip_v else 1.0
+		var ox := CELL_SIZE if _tile_flip_h else 0.0
+		var oy := CELL_SIZE if _tile_flip_v else 0.0
+		draw_set_transform(Vector2(ox, oy), 0.0, Vector2(sx, sy))
+		draw_texture_rect_region(TILE_TEX, dst, src)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	else:
+		draw_texture_rect_region(TILE_TEX, dst, src)
+	# Crossfade to grey tile variant
+	if tile_blend > 0.0:
+		var grey_src := Rect2(_grey_frame * FRAME_SIZE, 0, FRAME_SIZE, FRAME_SIZE)
+		draw_texture_rect_region(TILE_GREY_TEX, dst, grey_src, Color(1, 1, 1, tile_blend))
+	# Tint overlay for track vs highlight
+	if has_track and highlight > 0.0:
+		draw_rect(Rect2(0, 0, CELL_SIZE, CELL_SIZE), Color(HIGHLIGHT_COLOR, highlight * 0.4))
 
 	if square_data == null:
 		return
@@ -119,6 +177,13 @@ func _draw() -> void:
 	# Decorations (on non-track cells after win)
 	if decoration != DECO_NONE and deco_alpha > 0.0:
 		_draw_decoration()
+
+	# Bleed: fill the 1px grid gaps by extending cell edges
+	if grid_bleed > 0.0 or grid_bleed_right > 0.0 or grid_bleed_bottom > 0.0:
+		_draw_grid_bleed()
+
+	# Rail detail on grid lines between connected track heads (drawn last)
+	_draw_rail_detail()
 
 
 func _draw_track_shape(flags: int, col: Color) -> void:
@@ -178,6 +243,98 @@ func _draw_edge_notrack(d: int) -> void:
 	draw_line(center + Vector2(-off, off), center + Vector2(off, -off), NOTRACK_COLOR, 1.0)
 
 
+func _draw_rail_detail() -> void:
+	if square_data == null:
+		return
+	var my_tracks: int = square_data.e_dirs(TC.E_TRACK)
+	if my_tracks == 0 or _neighbor_track == 0:
+		return
+	var hi := Color("9c9c9c")
+	var lo := Color("686868")
+	# Left grid line: this cell has track-left AND neighbor-left has track-right
+	if (my_tracks & TC.DIR_L) and (_neighbor_track & TC.DIR_L):
+		draw_rect(Rect2(-1, 2, 1, 1), hi)
+		draw_rect(Rect2(-1, 3, 1, 1), lo)
+		draw_rect(Rect2(-1, 12, 1, 1), lo)
+		draw_rect(Rect2(-1, 13, 1, 1), hi)
+	# Top grid line: this cell has track-up AND neighbor-above has track-down
+	if (my_tracks & TC.DIR_U) and (_neighbor_track & TC.DIR_U):
+		draw_rect(Rect2(2, -1, 1, 1), hi)
+		draw_rect(Rect2(3, -1, 1, 1), lo)
+		draw_rect(Rect2(12, -1, 1, 1), lo)
+		draw_rect(Rect2(13, -1, 1, 1), hi)
+
+
+func _get_bleed_color() -> Color:
+	if decoration == DECO_TREE and deco_alpha >= 1.0:
+		return Color("996b49")
+	elif tile_blend > 0.5:
+		return Color("766f6b")
+	else:
+		return Color("766f6b")
+
+
+func _draw_grid_bleed() -> void:
+	var is_green := decoration == DECO_TREE and deco_alpha >= 1.0
+	var base := _get_bleed_color()
+	var frame := _green_mask & 0xF
+	var frame_x := frame * FRAME_SIZE
+	# Left + top (owned by this cell)
+	if grid_bleed > 0.0:
+		var a := grid_bleed
+		if is_green:
+			var tint := Color(1, 1, 1, a)
+			# Left: leftmost pixel column of green frame
+			draw_texture_rect_region(GREEN_TEX, Rect2(-1, 0, 1, CELL_SIZE),
+				Rect2(frame_x, 0, 1, FRAME_SIZE), tint)
+			# Top: topmost pixel row of green frame
+			draw_texture_rect_region(GREEN_TEX, Rect2(0, -1, CELL_SIZE, 1),
+				Rect2(frame_x, 0, FRAME_SIZE, 1), tint)
+			# Corner: top-left pixel
+			draw_texture_rect_region(GREEN_TEX, Rect2(-1, -1, 1, 1),
+				Rect2(frame_x, 0, 1, 1), tint)
+		else:
+			var col := Color(base, a)
+			draw_rect(Rect2(-1, 0, 1, CELL_SIZE), col)
+			draw_rect(Rect2(0, -1, CELL_SIZE, 1), col)
+			draw_rect(Rect2(-1, -1, 1, 1), col)
+		# Right edge
+	if grid_bleed_right > 0.0:
+		if is_green:
+			var tint := Color(1, 1, 1, grid_bleed_right)
+			# Rightmost pixel column of green frame
+			draw_texture_rect_region(GREEN_TEX, Rect2(CELL_SIZE, 0, 1, CELL_SIZE),
+				Rect2(frame_x + FRAME_SIZE - 1, 0, 1, FRAME_SIZE), tint)
+			draw_texture_rect_region(GREEN_TEX, Rect2(CELL_SIZE, -1, 1, 1),
+				Rect2(frame_x + FRAME_SIZE - 1, 0, 1, 1), tint)
+		else:
+			var col := Color(base, grid_bleed_right)
+			draw_rect(Rect2(CELL_SIZE, 0, 1, CELL_SIZE), col)
+			draw_rect(Rect2(CELL_SIZE, -1, 1, 1), col)
+	# Bottom edge
+	if grid_bleed_bottom > 0.0:
+		if is_green:
+			var tint := Color(1, 1, 1, grid_bleed_bottom)
+			# Bottom pixel row of green frame
+			draw_texture_rect_region(GREEN_TEX, Rect2(0, CELL_SIZE, CELL_SIZE, 1),
+				Rect2(frame_x, FRAME_SIZE - 1, FRAME_SIZE, 1), tint)
+			draw_texture_rect_region(GREEN_TEX, Rect2(-1, CELL_SIZE, 1, 1),
+				Rect2(frame_x, FRAME_SIZE - 1, 1, 1), tint)
+		else:
+			var col := Color(base, grid_bleed_bottom)
+			draw_rect(Rect2(0, CELL_SIZE, CELL_SIZE, 1), col)
+			draw_rect(Rect2(-1, CELL_SIZE, 1, 1), col)
+	# Bottom-right corner
+	if grid_bleed_right > 0.0 and grid_bleed_bottom > 0.0:
+		if is_green:
+			var tint := Color(1, 1, 1, maxf(grid_bleed_right, grid_bleed_bottom))
+			draw_texture_rect_region(GREEN_TEX, Rect2(CELL_SIZE, CELL_SIZE, 1, 1),
+				Rect2(frame_x + FRAME_SIZE - 1, FRAME_SIZE - 1, 1, 1), tint)
+		else:
+			var col := Color(base, maxf(grid_bleed_right, grid_bleed_bottom))
+			draw_rect(Rect2(CELL_SIZE, CELL_SIZE, 1, 1), col)
+
+
 func _draw_decoration() -> void:
 	match decoration:
 		DECO_TREE:
@@ -189,17 +346,21 @@ func _draw_decoration() -> void:
 
 
 func _draw_tree() -> void:
-	var green := Color(TREE_GREEN, deco_alpha)
-	var brown := Color(TREE_TRUNK, deco_alpha)
-	var cx := CELL_SIZE / 2.0
-	# Trunk: 2px wide, 6px tall
-	draw_rect(Rect2(cx - 1, 18, 2, 6), brown)
-	# Canopy: triangle
-	draw_colored_polygon(PackedVector2Array([
-		Vector2(cx, 4),
-		Vector2(cx - 7, 18),
-		Vector2(cx + 7, 18),
-	]), green)
+	# Draw autotiled green from atlas — mask (cardinal bits only) indexes the frame
+	var frame := _green_mask & 0xF  # lower 4 bits = R U L D
+	var src := Rect2(frame * FRAME_SIZE, 0, FRAME_SIZE, FRAME_SIZE)
+	draw_texture_rect_region(GREEN_TEX, Rect2(0, 0, CELL_SIZE, CELL_SIZE), src, Color(1, 1, 1, deco_alpha))
+	# Inner corners: both cardinal neighbors are green but diagonal is not
+	var border_col := Color(TREE_TRUNK, deco_alpha)
+	var bw := 2.0
+	if (_green_mask & TC.DIR_R) and (_green_mask & TC.DIR_U) and not (_green_mask & DIAG_NE):
+		draw_rect(Rect2(CELL_SIZE - bw, 0, bw, bw), border_col)
+	if (_green_mask & TC.DIR_L) and (_green_mask & TC.DIR_U) and not (_green_mask & DIAG_NW):
+		draw_rect(Rect2(0, 0, bw, bw), border_col)
+	if (_green_mask & TC.DIR_R) and (_green_mask & TC.DIR_D) and not (_green_mask & DIAG_SE):
+		draw_rect(Rect2(CELL_SIZE - bw, CELL_SIZE - bw, bw, bw), border_col)
+	if (_green_mask & TC.DIR_L) and (_green_mask & TC.DIR_D) and not (_green_mask & DIAG_SW):
+		draw_rect(Rect2(0, CELL_SIZE - bw, bw, bw), border_col)
 
 
 func _draw_house() -> void:
