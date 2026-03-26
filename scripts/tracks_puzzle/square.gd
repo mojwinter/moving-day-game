@@ -3,27 +3,29 @@ extends Node2D
 ## Draws track pieces, no-track marks, and error indicators via _draw().
 
 const TC := preload("res://scripts/tracks_puzzle/tracks_consts.gd")
-var TRACKS_TEX: Texture2D = load("res://assets/tracks/tracks.png")
-const FRAME_SIZE := 32
-# Sprite-sheet frame index for each 2-direction track shape
+var TRACKS_TEX: Texture2D = load("res://assets/tracks/tracks3.png")
+const FRAME_SIZE := 16
+# tracks3.png layout: frame 0 = UD straight, frame 1 = RD curve
+# All variants derived via 90° rotation increments around cell center
+# Each entry: [frame_index, rotation_count] (0=0°, 1=90°CW, 2=180°, 3=270°CW)
 const TRACK_FRAME := {
-	5:  0,  # LR  – horizontal
-	10: 1,  # UD  – vertical
-	12: 2,  # LD  – west-south curve
-	6:  3,  # LU  – west-north curve
-	3:  4,  # RU  – north-east curve
-	9:  5,  # RD  – south-east curve
+	10: [0, 0],  # UD  – straight vertical (as-is)
+	5:  [0, 1],  # LR  – straight horizontal (90° CW)
+	9:  [1, 0],  # RD  – curve (as-is, arc at bottom-right)
+	12: [1, 1],  # LD  – curve (90° CW, arc at bottom-left)
+	6:  [1, 2],  # LU  – curve (180°, arc at top-left)
+	3:  [1, 3],  # RU  – curve (270° CW, arc at top-right)
 }
 
 signal square_clicked(grid_x: int, grid_y: int, local_pos: Vector2)
 signal square_right_clicked(grid_x: int, grid_y: int, local_pos: Vector2)
 
-const CELL_SIZE := 28.0
+const CELL_SIZE := 16.0
 const CENTER := Vector2(CELL_SIZE / 2.0, CELL_SIZE / 2.0)
 
-# Rail positions for stubs (scaled for 28px cell)
-const RAIL_IN := 9.0
-const RAIL_OUT := 19.0
+# Rail positions for stubs
+const RAIL_IN := 5.0
+const RAIL_OUT := 11.0
 
 # Colors
 const BG_COLOR := Color(0.18, 0.16, 0.14)
@@ -85,12 +87,6 @@ func _draw() -> void:
 		bg = bg.lerp(HIGHLIGHT_COLOR, highlight * 0.4)
 	draw_rect(Rect2(0, 0, CELL_SIZE, CELL_SIZE), bg)
 
-	# Grid lines (all 4 edges so right/bottom border is visible)
-	draw_line(Vector2(0, 0), Vector2(CELL_SIZE, 0), GRID_LINE_COLOR, 1.0)
-	draw_line(Vector2(0, 0), Vector2(0, CELL_SIZE), GRID_LINE_COLOR, 1.0)
-	draw_line(Vector2(CELL_SIZE, 0), Vector2(CELL_SIZE, CELL_SIZE), GRID_LINE_COLOR, 1.0)
-	draw_line(Vector2(0, CELL_SIZE), Vector2(CELL_SIZE, CELL_SIZE), GRID_LINE_COLOR, 1.0)
-
 	if square_data == null:
 		return
 
@@ -127,7 +123,8 @@ func _draw() -> void:
 
 func _draw_track_shape(flags: int, col: Color) -> void:
 	if TRACK_FRAME.has(flags):
-		_draw_track_sprite(TRACK_FRAME[flags], col)
+		var info: Array = TRACK_FRAME[flags]
+		_draw_track_sprite(info[0], info[1], col)
 		return
 	# Fallback: draw individual edge stubs
 	for i in range(4):
@@ -136,26 +133,31 @@ func _draw_track_shape(flags: int, col: Color) -> void:
 			_draw_stub(d, col)
 
 
-func _draw_track_sprite(frame: int, col: Color) -> void:
+func _draw_track_sprite(frame: int, rot: int, col: Color) -> void:
 	var src := Rect2(frame * FRAME_SIZE, 0, FRAME_SIZE, FRAME_SIZE)
-	draw_texture_rect_region(TRACKS_TEX, Rect2(0, 0, CELL_SIZE, CELL_SIZE), src, col)
+	if rot == 0:
+		draw_texture_rect_region(TRACKS_TEX, Rect2(0, 0, CELL_SIZE, CELL_SIZE), src, col)
+	else:
+		# Rotate around the cell center
+		var half := CELL_SIZE / 2.0
+		var angle := rot * PI / 2.0
+		draw_set_transform(Vector2(half, half), angle, Vector2.ONE)
+		draw_texture_rect_region(TRACKS_TEX, Rect2(-half, -half, CELL_SIZE, CELL_SIZE), src, col)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func _draw_stub(d: int, col: Color) -> void:
-	# Draw a short track stub from edge inward
-	var stub_len := 7.0
-	if d == TC.DIR_L:
-		draw_line(Vector2(0, RAIL_IN), Vector2(stub_len, RAIL_IN), col, 1.0)
-		draw_line(Vector2(0, RAIL_OUT), Vector2(stub_len, RAIL_OUT), col, 1.0)
-	elif d == TC.DIR_R:
-		draw_line(Vector2(CELL_SIZE - stub_len, RAIL_IN), Vector2(CELL_SIZE, RAIL_IN), col, 1.0)
-		draw_line(Vector2(CELL_SIZE - stub_len, RAIL_OUT), Vector2(CELL_SIZE, RAIL_OUT), col, 1.0)
+	# Track head sprite is frame 2, facing down by default
+	var rot: int = 0
+	if d == TC.DIR_D:
+		rot = 0
+	elif d == TC.DIR_L:
+		rot = 1
 	elif d == TC.DIR_U:
-		draw_line(Vector2(RAIL_IN, 0), Vector2(RAIL_IN, stub_len), col, 1.0)
-		draw_line(Vector2(RAIL_OUT, 0), Vector2(RAIL_OUT, stub_len), col, 1.0)
-	elif d == TC.DIR_D:
-		draw_line(Vector2(RAIL_IN, CELL_SIZE - stub_len), Vector2(RAIL_IN, CELL_SIZE), col, 1.0)
-		draw_line(Vector2(RAIL_OUT, CELL_SIZE - stub_len), Vector2(RAIL_OUT, CELL_SIZE), col, 1.0)
+		rot = 2
+	elif d == TC.DIR_R:
+		rot = 3
+	_draw_track_sprite(2, rot, col)
 
 
 func _draw_edge_notrack(d: int) -> void:
