@@ -36,13 +36,10 @@ layout_mode = 0
 offset_right = 240.0
 offset_bottom = 110.0
 
-[node name="TitleLabel" type="Label" parent="CardBG"]
+[node name="TitleImage" type="TextureRect" parent="CardBG"]
 layout_mode = 0
 offset_top = 85.0
 offset_right = 240.0
 offset_bottom = 110.0
-theme_override_fonts/font = ExtResource("3_font")
-theme_override_font_sizes/font_size = 24
-text = "PUZZLE"
-horizontal_alignment = 1
-vertical_alignment = 1
+stretch_mode = 0
+expand_mode = 0

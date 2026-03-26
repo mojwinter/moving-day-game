@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://cuhideafo67am"]
+[gd_scene load_steps=13 format=3 uid="uid://cuhideafo67am"]
 
 [ext_resource type="Script" uid="uid://b2va5fr38wnxp" path="res://scripts/tv_selector/tv_selector.gd" id="1_sel"]
 [ext_resource type="PackedScene" uid="uid://s7mvdi0667dq" path="res://scenes/tv_selector/puzzle_card.tscn" id="2_card"]
@@ -7,6 +7,9 @@
 [ext_resource type="SpriteFrames" path="res://assets/tv_frames/tv_sprite_frames.tres" id="4_static"]
 [ext_resource type="Texture2D" uid="uid://nasb3nengexg" path="res://assets/preview/net_preview.png" id="5_net_preview"]
 [ext_resource type="FontFile" uid="uid://c2fontm3x6" path="res://assets/fonts/m3x6.ttf" id="6_font"]
+[ext_resource type="Texture2D" path="res://assets/preview/loopy_preview.png" id="8_loopy_preview"]
+[ext_resource type="Texture2D" path="res://assets/preview/loopy_title.png" id="9_loopy_title"]
+[ext_resource type="Texture2D" path="res://assets/preview/net_title.png" id="10_net_title"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_crt"]
 shader = ExtResource("3_crt")
@@ -68,6 +71,7 @@ offset_bottom = 180.0
 color = Color(0.04, 0.04, 0.07, 1)
 
 [node name="CardContainer" type="Control" parent="ViewportContainer/SubViewport"]
+clip_contents = true
 layout_mode = 3
 anchors_preset = 0
 offset_left = 40.0
@@ -77,24 +81,27 @@ offset_bottom = 133.0
 
 [node name="PuzzleCard0" parent="ViewportContainer/SubViewport/CardContainer" instance=ExtResource("2_card")]
 layout_mode = 0
-puzzle_name = "NET PUZZLE"
+puzzle_name = "REWIRED"
 puzzle_scene_path = "res://scenes/net_puzzle/net_puzzle.tscn"
 preview_color = Color(0.12, 0.18, 0.35, 1)
 preview_texture = ExtResource("5_net_preview")
+title_texture = ExtResource("10_net_title")
 
 [node name="PuzzleCard1" parent="ViewportContainer/SubViewport/CardContainer" instance=ExtResource("2_card")]
 visible = false
 layout_mode = 0
-puzzle_name = "TRACKS"
+puzzle_name = "DETOUR"
 puzzle_scene_path = "res://scenes/tracks_puzzle/tracks_puzzle.tscn"
 preview_color = Color(0.12, 0.3, 0.15, 1)
 
 [node name="PuzzleCard2" parent="ViewportContainer/SubViewport/CardContainer" instance=ExtResource("2_card")]
 visible = false
 layout_mode = 0
-puzzle_name = "LOOPY"
+puzzle_name = "CONSTELLATIONS"
 puzzle_scene_path = "res://scenes/loopy_puzzle/loopy_puzzle.tscn"
 preview_color = Color(0.25, 0.12, 0.35, 1)
+preview_texture = ExtResource("8_loopy_preview")
+title_texture = ExtResource("9_loopy_title")
 
 [node name="CRTOverlay" type="ColorRect" parent="ViewportContainer/SubViewport"]
 material = SubResource("ShaderMaterial_crt")
@@ -113,6 +120,7 @@ offset_left = 12.0
 offset_top = 23.0
 offset_right = 36.0
 offset_bottom = 133.0
+mouse_filter = 0
 theme_override_fonts/font = ExtResource("6_font")
 theme_override_font_sizes/font_size = 24
 text = "<"
@@ -124,6 +132,7 @@ offset_left = 284.0
 offset_top = 23.0
 offset_right = 308.0
 offset_bottom = 133.0
+mouse_filter = 0
 theme_override_fonts/font = ExtResource("6_font")
 theme_override_font_sizes/font_size = 24
 text = ">"
@@ -139,9 +148,11 @@ alignment = 1
 
 [node name="PlayButton" type="Label" parent="TextOverlay/ButtonRow"]
 layout_mode = 2
+mouse_filter = 0
 theme_override_fonts/font = ExtResource("6_font")
 theme_override_font_sizes/font_size = 24
 text = "> PLAY <"
+custom_minimum_size = Vector2(70, 0)
 horizontal_alignment = 1
 
 [node name="Spacer" type="Control" parent="TextOverlay/ButtonRow"]
@@ -151,6 +162,7 @@ layout_mode = 2
 [node name="CustomButton" type="Label" parent="TextOverlay/ButtonRow"]
 modulate = Color(0.5, 0.5, 0.5, 1)
 layout_mode = 2
+mouse_filter = 0
 theme_override_fonts/font = ExtResource("6_font")
 theme_override_font_sizes/font_size = 24
 text = "CUSTOM"

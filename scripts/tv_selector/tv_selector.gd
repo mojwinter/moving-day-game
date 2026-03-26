@@ -12,9 +12,9 @@ const COMING_SOON_DURATION := 1.5
 const CRT_EXPAND_DURATION := 0.8
 
 var _puzzle_data := [
-	{"name": "NET PUZZLE", "path": "res://scenes/net_puzzle/net_puzzle.tscn", "color": Color(0.12, 0.18, 0.35)},
-	{"name": "TRACKS", "path": "res://scenes/tracks_puzzle/tracks_puzzle.tscn", "color": Color(0.12, 0.3, 0.15)},
-	{"name": "LOOPY", "path": "res://scenes/loopy_puzzle/loopy_puzzle.tscn", "color": Color(0.25, 0.12, 0.35)},
+	{"name": "REWIRED", "path": "res://scenes/net_puzzle/net_puzzle.tscn", "color": Color(0.12, 0.18, 0.35)},
+	{"name": "DETOUR", "path": "res://scenes/tracks_puzzle/tracks_puzzle.tscn", "color": Color(0.12, 0.3, 0.15)},
+	{"name": "CONSTELLATIONS", "path": "res://scenes/loopy_puzzle/loopy_puzzle.tscn", "color": Color(0.25, 0.12, 0.35)},
 ]
 
 var _current_index := 0
@@ -58,6 +58,10 @@ func _ready() -> void:
 	_update_dots()
 	_update_buttons()
 	_start_arrow_pulse()
+	_arrow_left.gui_input.connect(_on_arrow_left_click)
+	_arrow_right.gui_input.connect(_on_arrow_right_click)
+	_play_btn.gui_input.connect(_on_play_click)
+	_custom_btn.gui_input.connect(_on_custom_click)
 
 
 func _reset_crt_params() -> void:
@@ -67,7 +71,6 @@ func _reset_crt_params() -> void:
 
 
 func open() -> void:
-	_current_index = 0
 	_button_focused = 0
 	_update_cards()
 	_update_dots()
@@ -251,13 +254,36 @@ func _update_dots() -> void:
 func _update_buttons() -> void:
 	_play_btn.modulate = Color.WHITE if _button_focused == 0 else Color(0.5, 0.5, 0.5)
 	_custom_btn.modulate = Color.WHITE if _button_focused == 1 else Color(0.5, 0.5, 0.5)
-	# Underline or highlight the focused button
-	if _button_focused == 0:
-		_play_btn.text = "> PLAY <"
-		_custom_btn.text = "CUSTOM"
-	else:
-		_play_btn.text = "PLAY"
-		_custom_btn.text = "> CUSTOM <"
+	_play_btn.text = "> PLAY <"
+	_custom_btn.text = "> CUSTOM <"
+
+
+func _is_click(event: InputEvent) -> bool:
+	return event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+
+
+func _on_arrow_left_click(event: InputEvent) -> void:
+	if _is_click(event) and not _expanding:
+		_cycle(-1)
+
+
+func _on_arrow_right_click(event: InputEvent) -> void:
+	if _is_click(event) and not _expanding:
+		_cycle(1)
+
+
+func _on_play_click(event: InputEvent) -> void:
+	if _is_click(event) and not _expanding:
+		_button_focused = 0
+		_update_buttons()
+		_on_button_pressed()
+
+
+func _on_custom_click(event: InputEvent) -> void:
+	if _is_click(event) and not _expanding:
+		_button_focused = 1
+		_update_buttons()
+		_on_button_pressed()
 
 
 func _start_arrow_pulse() -> void:
