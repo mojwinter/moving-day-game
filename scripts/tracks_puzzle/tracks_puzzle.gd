@@ -34,10 +34,7 @@ const PROGRESSION := [
 
 var square_nodes := []
 var _solved := false
-var _win_tween: Tween = null
-var _deco_tween: Tween = null
 var _transition_tween: Tween = null
-var _tile_flip_tween: Tween = null
 var _grid_line_alpha: float = 1.0:
 	set(v):
 		_grid_line_alpha = v
@@ -383,6 +380,25 @@ func _refresh_all() -> void:
 			if y < gh - 1 and (grid_manager.squares[idx + gw].e_dirs(TC.E_TRACK) & TC.DIR_U):
 				nt |= TC.DIR_D
 			square_nodes[idx]._neighbor_track = nt
+			# Compute which neighbors are track cells (for bleed blending)
+			var nht := 0
+			if x > 0:
+				var ns = grid_manager.squares[idx - 1]
+				if ns.has_flag(TC.S_TRACK) or ns.e_count(TC.E_TRACK) > 0:
+					nht |= TC.DIR_L
+			if y > 0:
+				var ns = grid_manager.squares[idx - gw]
+				if ns.has_flag(TC.S_TRACK) or ns.e_count(TC.E_TRACK) > 0:
+					nht |= TC.DIR_U
+			if x < gw - 1:
+				var ns = grid_manager.squares[idx + 1]
+				if ns.has_flag(TC.S_TRACK) or ns.e_count(TC.E_TRACK) > 0:
+					nht |= TC.DIR_R
+			if y < gh - 1:
+				var ns = grid_manager.squares[idx + gw]
+				if ns.has_flag(TC.S_TRACK) or ns.e_count(TC.E_TRACK) > 0:
+					nht |= TC.DIR_D
+			square_nodes[idx]._neighbor_has_track = nht
 			square_nodes[idx].refresh(grid_manager.squares[idx])
 	# Update current grid's label errors in-place
 	if _grid_labels.size() > 0:
@@ -397,12 +413,10 @@ func _on_puzzle_solved() -> void:
 
 
 func _play_win_highlight() -> void:
+	# Crossfade track cells from dirt to gravel, then grid removal
 	var gw: int = grid_manager.GRID_W
 	var gh: int = grid_manager.GRID_H
-	if _win_tween and _win_tween.is_valid():
-		_win_tween.kill()
-	_win_tween = create_tween()
-	var tween := _win_tween
+	var tween := create_tween()
 	tween.set_parallel(true)
 	var delay := 0.0
 	for y in range(gh):
@@ -413,97 +427,77 @@ func _play_win_highlight() -> void:
 			if not has_track:
 				continue
 			var sq_node = square_nodes[idx]
-			sq_node.highlight = 1.0
-			tween.tween_property(sq_node, "highlight", 0.0, 0.8).set_delay(delay).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			sq_node.tile_blend = 0.0
+			tween.tween_property(sq_node, "tile_blend", 1.0, 0.3).set_delay(delay).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 			delay += 0.04
-	print("[TRACKS] win_highlight started  total_delay=%.2fs" % delay)
 	tween.finished.connect(_spawn_decorations)
 
 
 func _spawn_decorations() -> void:
 	var gw: int = grid_manager.GRID_W
 	var gh: int = grid_manager.GRID_H
+	# Collect empty (non-track) cell indices
 	var empty_indices := []
 	for y in range(gh):
 		for x in range(gw):
 			var idx := y * gw + x
 			var sq_data = grid_manager.squares[idx]
-			var has_track: bool = sq_data.has_flag(TC.S_TRACK) or sq_data.e_count(TC.E_TRACK) > 0
-			if not has_track:
+			if not (sq_data.has_flag(TC.S_TRACK) or sq_data.e_count(TC.E_TRACK) > 0):
 				empty_indices.append(idx)
 
-	print("[TRACKS] spawn_decorations  empty_count=%d" % empty_indices.size())
 	if empty_indices.is_empty():
-		print("[TRACKS]   no empties, skipping to transition")
 		_on_decorations_done()
 		return
 
-	# Build a set of empty cell indices for fast neighbor lookup
 	var empty_set := {}
 	for idx in empty_indices:
 		empty_set[idx] = true
 
-	# Compute autotile neighbor mask for each empty cell
+	# Place trees first (need two horizontally adjacent empty cells)
+	# The bottom-left cell owns the tree; top two cells can overlap so only
+	# bottom pair must be empty
+	var used := {}
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(grid_manager.GRID_W * 1000 + grid_manager.GRID_H + _chain_count)
 	for idx in empty_indices:
+		if used.has(idx):
+			continue
 		var x: int = idx % gw
-		var y: int = idx / gw
-		var mask := 0
-		if x < gw - 1 and empty_set.has(idx + 1):
-			mask |= TC.DIR_R
-		if y > 0 and empty_set.has(idx - gw):
-			mask |= TC.DIR_U
-		if x > 0 and empty_set.has(idx - 1):
-			mask |= TC.DIR_L
-		if y < gh - 1 and empty_set.has(idx + gw):
-			mask |= TC.DIR_D
-		# Diagonal neighbors for inner corners (NE=16, NW=32, SE=64, SW=128)
-		if x < gw - 1 and y > 0 and empty_set.has(idx - gw + 1):
-			mask |= 16  # NE
-		if x > 0 and y > 0 and empty_set.has(idx - gw - 1):
-			mask |= 32  # NW
-		if x < gw - 1 and y < gh - 1 and empty_set.has(idx + gw + 1):
-			mask |= 64  # SE
-		if x > 0 and y < gh - 1 and empty_set.has(idx + gw - 1):
-			mask |= 128  # SW
-		square_nodes[idx]._green_mask = mask
+		# Need both cells on the same grid row
+		if x >= gw - 1:
+			continue
+		var right_idx: int = idx + 1
+		if not empty_set.has(right_idx) or used.has(right_idx):
+			continue
+		# Sparse: ~15% chance
+		if rng.randf() > 0.15:
+			continue
+		square_nodes[idx].decoration = square_nodes[idx].DECO_TREE
+		square_nodes[idx].z_index = 2  # draw above neighbors so tree isn't clipped
+		used[idx] = true
+		used[right_idx] = true
 
-	# All empty cells get DECO_TREE (green autotile); pick some for house/water instead
-	var selected := empty_indices.duplicate()
-	selected.sort()
-	print("[TRACKS]   placing %d decorations" % selected.size())
+	# Place rocks on remaining empty cells (~30% chance)
+	for idx in empty_indices:
+		if used.has(idx):
+			continue
+		if rng.randf() > 0.30:
+			continue
+		square_nodes[idx].decoration = square_nodes[idx].DECO_ROCKS
+		used[idx] = true
 
-	for idx in selected:
-		square_nodes[idx].decoration = square_nodes[0].DECO_TREE
-
-	if _deco_tween and _deco_tween.is_valid():
-		_deco_tween.kill()
-	_deco_tween = create_tween()
-	_deco_tween.set_parallel(true)
+	# Fade in decorations
+	var deco_tween := create_tween()
+	deco_tween.set_parallel(true)
 	var delay := 0.0
-	for idx in selected:
+	for idx in empty_indices:
 		var sq_node = square_nodes[idx]
+		if sq_node.decoration == 0:
+			continue
 		sq_node.deco_alpha = 0.0
-		_deco_tween.tween_property(sq_node, "deco_alpha", 1.0, 0.3).set_delay(delay).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		deco_tween.tween_property(sq_node, "deco_alpha", 1.0, 0.3).set_delay(delay).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		delay += 0.06
-	_deco_tween.finished.connect(_flip_tiles_to_grey)
-
-
-func _flip_tiles_to_grey() -> void:
-	var gw: int = grid_manager.GRID_W
-	var gh: int = grid_manager.GRID_H
-	if _tile_flip_tween and _tile_flip_tween.is_valid():
-		_tile_flip_tween.kill()
-	_tile_flip_tween = create_tween()
-	_tile_flip_tween.set_parallel(true)
-	var delay := 0.0
-	for y in range(gh):
-		for x in range(gw):
-			var idx := y * gw + x
-			var sq_node = square_nodes[idx]
-			sq_node.tile_blend = 0.0
-			_tile_flip_tween.tween_property(sq_node, "tile_blend", 1.0, 0.3).set_delay(delay).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-			delay += 0.04
-	_tile_flip_tween.finished.connect(_on_decorations_done)
+	deco_tween.finished.connect(_on_decorations_done)
 
 
 func _on_decorations_done() -> void:
@@ -520,14 +514,6 @@ func _on_decorations_done() -> void:
 			var sq_node = square_nodes[y * gw + x]
 			sq_node.grid_bleed = 0.0
 			fade_tween.tween_property(sq_node, "grid_bleed", 1.0, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-			# Right column owns the right outer border
-			if x == gw - 1:
-				sq_node.grid_bleed_right = 0.0
-				fade_tween.tween_property(sq_node, "grid_bleed_right", 1.0, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-			# Bottom row owns the bottom outer border
-			if y == gh - 1:
-				sq_node.grid_bleed_bottom = 0.0
-				fade_tween.tween_property(sq_node, "grid_bleed_bottom", 1.0, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	fade_tween.set_parallel(false)
 	fade_tween.tween_callback(_start_chain_transition).set_delay(0.5)
 

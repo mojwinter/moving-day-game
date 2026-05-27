@@ -1,7 +1,7 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=3 format=3 uid="uid://du60r041bwk03"]
 
-[ext_resource type="Script" path="res://scripts/tracks_puzzle/tracks_puzzle.gd" id="1_puzzle"]
-[ext_resource type="Script" path="res://scripts/tracks_puzzle/grid_manager.gd" id="2_grid"]
+[ext_resource type="Script" uid="uid://c2sx6lfl5gjbe" path="res://scripts/tracks_puzzle/tracks_puzzle.gd" id="1_puzzle"]
+[ext_resource type="Script" uid="uid://6yy0ef0aenui" path="res://scripts/tracks_puzzle/grid_manager.gd" id="2_grid"]
 
 [node name="TracksPuzzle" type="Node2D"]
 script = ExtResource("1_puzzle")
